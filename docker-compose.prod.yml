@@ -1,0 +1,54 @@
+version: '3.8'
+
+# Production overrides for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+    restart: always
+    # Production logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  web:
+    restart: always
+    # Production logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgres:
+    restart: always
+    # Production backup volume (optional)
+    # volumes:
+    #   - pgdata:/var/lib/postgresql/data
+    #   - ./backups:/backups
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  minio:
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+

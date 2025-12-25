@@ -1,0 +1,33 @@
+{
+  "name": "Field Ticket System - 开发看板",
+  "body": "非标自动化客服现场问题反馈系统开发看板",
+  "columns": [
+    {
+      "name": "📋 Backlog",
+      "description": "待开始的任务"
+    },
+    {
+      "name": "🔨 Sprint 1: MVP闭环",
+      "description": "Sprint 1 任务（2周）"
+    },
+    {
+      "name": "🚀 Sprint 2: 可用性增强",
+      "description": "Sprint 2 任务（2周）"
+    },
+    {
+      "name": "✨ Sprint 3: 体验优化",
+      "description": "Sprint 3 任务（2周）"
+    },
+    {
+      "name": "👀 待审查",
+      "description": "等待代码审查"
+    },
+    {
+      "name": "✅ 已完成",
+      "description": "已完成的任务"
+    }
+  ]
+}
+
+
+

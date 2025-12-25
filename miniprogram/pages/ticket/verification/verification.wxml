@@ -1,0 +1,126 @@
+<!--验证结果提交页面-->
+<view class="container">
+  <view wx:if="{{loadingData}}" class="loading-container">
+    <text>加载中...</text>
+  </view>
+
+  <view wx:else class="content">
+    <!-- 工单信息 -->
+    <view class="section">
+      <view class="section-title">工单信息</view>
+      <view class="info-item">
+        <text class="label">工单号：</text>
+        <text class="value">{{ticket.ticket_no}}</text>
+      </view>
+    </view>
+
+    <!-- 解决方案选择 -->
+    <view class="section">
+      <view class="section-title">解决方案</view>
+      <picker
+        mode="selector"
+        range="{{solutions}}"
+        range-key="title"
+        value="{{selectedSolutionIndex}}"
+        bindchange="onSolutionChange"
+      >
+        <view class="picker">
+          <text wx:if="{{selectedSolution}}">{{selectedSolution.title}}</text>
+          <text wx:else class="placeholder">请选择解决方案</text>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 验证清单 -->
+    <view wx:if="{{checklistItems.length > 0}}" class="section">
+      <view class="section-title">验证清单</view>
+      <view class="checklist">
+        <view
+          wx:for="{{checklistItems}}"
+          wx:key="id"
+          class="checklist-item"
+        >
+          <checkbox
+            checked="{{checklistResult[item.id].completed}}"
+            data-id="{{item.id}}"
+            bindchange="onChecklistChange"
+          />
+          <view class="checklist-content">
+            <text class="checklist-text">{{item.text}}</text>
+            <text wx:if="{{item.acceptanceCriteria}}" class="checklist-criteria">
+              验收标准：{{item.acceptanceCriteria}}
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 验证数据 -->
+    <view class="section">
+      <view class="section-title">验证数据</view>
+      <view class="form-item">
+        <text class="label">验证次数：</text>
+        <input
+          type="number"
+          value="{{runCount}}"
+          bindinput="onRunCountChange"
+          class="input"
+        />
+      </view>
+      <view class="form-item">
+        <text class="label">通过次数：</text>
+        <input
+          type="number"
+          value="{{passCount}}"
+          bindinput="onPassCountChange"
+          class="input"
+        />
+      </view>
+      <view class="form-item">
+        <text class="label">失败次数：</text>
+        <text class="value">{{failCount}}</text>
+      </view>
+    </view>
+
+    <!-- 验证证据 -->
+    <view class="section">
+      <view class="section-title">验证证据</view>
+      <view class="evidence-list">
+        <view
+          wx:for="{{evidenceAttachmentIds}}"
+          wx:key="index"
+          class="evidence-item"
+        >
+          <text>证据 {{index + 1}}</text>
+          <text class="remove-btn" data-index="{{index}}" bindtap="removeEvidence">删除</text>
+        </view>
+      </view>
+      <button class="upload-btn" bindtap="uploadEvidence">上传证据</button>
+    </view>
+
+    <!-- 备注 -->
+    <view class="section">
+      <view class="section-title">备注</view>
+      <textarea
+        value="{{note}}"
+        bindinput="onNoteInput"
+        placeholder="请输入验证备注（可选）"
+        class="textarea"
+        maxlength="500"
+      />
+    </view>
+
+    <!-- 提交按钮 -->
+    <view class="footer">
+      <button
+        class="submit-btn"
+        bindtap="submitVerification"
+        loading="{{loading}}"
+        disabled="{{loading}}"
+      >
+        提交验证结果
+      </button>
+    </view>
+  </view>
+</view>
+

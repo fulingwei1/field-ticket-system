@@ -1,0 +1,57 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/index/index",
+    "pages/ticket/list/list",
+    "pages/ticket/create/step1",
+    "pages/ticket/create/step2",
+    "pages/ticket/create/step3",
+    "pages/ticket/create/step4",
+    "pages/ticket/create/step5",
+    "pages/ticket/missing-info/missing-info",
+    "pages/ticket/verification/verification",
+    "pages/ticket/communication/communication"
+  ],
+  "window": {
+    "navigationBarTitleText": "现场问题反馈",
+    "navigationBarBackgroundColor": "#1890ff",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f5f5"
+  },
+  "tabBar": {
+    "color": "#7A7E83",
+    "selectedColor": "#1890ff",
+    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "iconPath": "images/home.png",
+        "selectedIconPath": "images/home-active.png",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/ticket/list/list",
+        "iconPath": "images/ticket.png",
+        "selectedIconPath": "images/ticket-active.png",
+        "text": "工单"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于扫码定位设备"
+    },
+    "scope.camera": {
+      "desc": "用于扫描二维码和拍照上传"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation",
+    "chooseLocation"
+  ],
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}
+

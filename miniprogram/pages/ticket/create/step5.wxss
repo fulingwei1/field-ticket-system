@@ -1,0 +1,81 @@
+/* step5.wxss */
+.header {
+  padding: 30rpx;
+  background-color: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.step-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.preview-section {
+  padding: 30rpx;
+  padding-bottom: 200rpx;
+}
+
+.preview-card {
+  background-color: #fff;
+  border-radius: 8rpx;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.card-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  padding-bottom: 15rpx;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-content text {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 15rpx;
+  line-height: 1.6;
+}
+
+.detail-text {
+  color: #333;
+  margin-top: 10rpx;
+  margin-bottom: 20rpx;
+}
+
+.attachment-item {
+  display: block;
+  padding: 10rpx 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.attachment-item:last-child {
+  border-bottom: none;
+}
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  padding: 30rpx;
+  background-color: #fff;
+  border-top: 1px solid #f0f0f0;
+}
+
+.prev-btn,
+.submit-btn {
+  flex: 1;
+  margin: 0 10rpx;
+}
+

@@ -1,0 +1,55 @@
+/* index.wxss */
+.header {
+  background-color: #1890ff;
+  padding: 40rpx;
+  color: #fff;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 36rpx;
+  font-weight: bold;
+  margin-bottom: 10rpx;
+}
+
+.user-role {
+  font-size: 24rpx;
+  opacity: 0.8;
+}
+
+.menu-list {
+  padding: 40rpx;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 30rpx;
+  background-color: #fff;
+  border-radius: 8rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.menu-icon {
+  font-size: 48rpx;
+  margin-right: 30rpx;
+}
+
+.menu-text {
+  font-size: 32rpx;
+  color: #333;
+}
+
+.footer {
+  padding: 40rpx;
+}
+
+.logout-btn {
+  width: 100%;
+}
+

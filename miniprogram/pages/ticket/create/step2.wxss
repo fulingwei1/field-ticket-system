@@ -1,0 +1,70 @@
+/* step2.wxss */
+.header {
+  padding: 30rpx;
+  background-color: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.step-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.form-section {
+  padding: 30rpx;
+}
+
+.form-item {
+  margin-bottom: 40rpx;
+}
+
+.form-label {
+  display: block;
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 15rpx;
+}
+
+.form-input {
+  width: 100%;
+  height: 80rpx;
+  padding: 0 20rpx;
+  border: 1px solid #d9d9d9;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+}
+
+.picker {
+  width: 100%;
+  height: 80rpx;
+  line-height: 80rpx;
+  padding: 0 20rpx;
+  border: 1px solid #d9d9d9;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.picker:empty::before {
+  content: '请选择问题域';
+  color: #999;
+}
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  padding: 30rpx;
+  background-color: #fff;
+  border-top: 1px solid #f0f0f0;
+}
+
+.prev-btn,
+.next-btn {
+  flex: 1;
+  margin: 0 10rpx;
+}
+

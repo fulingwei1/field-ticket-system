@@ -1,0 +1,79 @@
+<!--step2.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="step-title">步骤 2/5：问题域和步骤</text>
+  </view>
+
+  <view class="form-section">
+    <view class="form-item">
+      <text class="form-label">问题域 *</text>
+      <picker
+        mode="selector"
+        range="{{domainOptions}}"
+        range-key="label"
+        value="{{domainIndex >= 0 ? domainIndex : 0}}"
+        bindchange="onDomainChange"
+      >
+        <view class="picker">
+          {{domain && domainIndex >= 0 ? domainOptions[domainIndex].label : '请选择问题域'}}
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">步骤代码 *</text>
+      <input
+        class="form-input"
+        placeholder="如：Step_120_Clamp_Check"
+        value="{{stepCode}}"
+        bindinput="onStepCodeInput"
+      />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">步骤名称</text>
+      <input
+        class="form-input"
+        placeholder="如：夹具到位检测"
+        value="{{stepName}}"
+        bindinput="onStepNameInput"
+      />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">软件版本 *</text>
+      <input
+        class="form-input"
+        placeholder="请输入软件版本"
+        value="{{swVersion}}"
+        bindinput="onSwVersionInput"
+      />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">PLC版本 *</text>
+      <input
+        class="form-input"
+        placeholder="请输入PLC版本"
+        value="{{plcVersion}}"
+        bindinput="onPlcVersionInput"
+      />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">参数版本 *</text>
+      <input
+        class="form-input"
+        placeholder="请输入参数版本"
+        value="{{paramVersion}}"
+        bindinput="onParamVersionInput"
+      />
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="btn btn-default prev-btn" bindtap="onPrev">上一步</button>
+    <button class="btn btn-primary next-btn" bindtap="onNext">下一步</button>
+  </view>
+</view>
+

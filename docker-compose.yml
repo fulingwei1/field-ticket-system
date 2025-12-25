@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fieldticket-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fieldticket}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-fieldticket}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fieldticket-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: fieldticket-redis
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
+    volumes:
+      - redisdata:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ${REDIS_PASSWORD:+-a ${REDIS_PASSWORD}} ping | grep PONG || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fieldticket-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: fieldticket-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - miniodata:/data
+      - ./scripts/init-minio.sh:/docker-entrypoint-initdb.d/init-minio.sh
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - fieldticket-network
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fieldticket-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__DefaultConnection: Host=postgres;Database=${POSTGRES_DB:-fieldticket};Username=${POSTGRES_USER:-app};Password=${POSTGRES_PASSWORD};Port=5432
+      ConnectionStrings__Redis: redis:6379${REDIS_PASSWORD:+,password=${REDIS_PASSWORD}}
+      MinIO__Endpoint: minio:9000
+      MinIO__AccessKey: ${MINIO_ROOT_USER:-minioadmin}
+      MinIO__SecretKey: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MinIO__Bucket: ${MINIO_BUCKET:-attachments}
+      MinIO__UseSSL: "false"
+      WeCom__CorpId: ${WECOM_CORP_ID}
+      WeCom__AgentId: ${WECOM_AGENT_ID}
+      WeCom__Secret: ${WECOM_SECRET}
+      WeCom__RedirectUri: ${WECOM_REDIRECT_URI}
+      WeCom__WebBaseUrl: ${WEB_URL:-http://localhost:3000}
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Issuer: ${JWT_ISSUER:-field-ticket-api}
+      Jwt__ExpiresInHours: ${JWT_EXPIRES_IN_HOURS:-168}
+      Cors__AllowedOrigins__0: ${WEB_URL:-http://localhost:3000}
+      Cors__AllowedOrigins__1: ${WEB_DEV_URL:-http://localhost:5173}
+    ports:
+      - "${API_PORT:-5000}:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5000/health || curl -f http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - fieldticket-network
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web-admin
+      dockerfile: Dockerfile
+    container_name: fieldticket-web
+    environment:
+      REACT_APP_API_URL: ${API_URL:-http://localhost:5000}
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    depends_on:
+      - api
+    networks:
+      - fieldticket-network
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+  miniodata:
+    driver: local
+
+networks:
+  fieldticket-network:
+    driver: bridge
+
+

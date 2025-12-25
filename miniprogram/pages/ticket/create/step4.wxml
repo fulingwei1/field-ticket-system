@@ -1,0 +1,52 @@
+<!--step4.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="step-title">步骤 4/5：附件上传</text>
+  </view>
+
+  <view class="upload-section">
+    <view class="upload-buttons">
+      <button class="btn btn-primary upload-btn" bindtap="takePhoto" disabled="{{uploading}}">
+        📷 拍照
+      </button>
+      <button class="btn btn-primary upload-btn" bindtap="chooseImage" disabled="{{uploading}}">
+        🖼️ 选择图片
+      </button>
+      <button class="btn btn-primary upload-btn" bindtap="chooseVideo" disabled="{{uploading}}">
+        🎥 选择视频
+      </button>
+      <button class="btn btn-primary upload-btn" bindtap="chooseFile" disabled="{{uploading}}">
+        📄 选择文件
+      </button>
+    </view>
+
+    <view class="upload-progress" wx:if="{{uploading}}">
+      <text>上传中... {{uploadProgress}}%</text>
+    </view>
+  </view>
+
+  <view class="attachments-section" wx:if="{{attachments.length > 0}}">
+    <text class="section-title">已上传附件（{{attachments.length}}）</text>
+    <view class="attachments-list">
+      <view class="attachment-item" wx:for="{{attachments}}" wx:key="id">
+        <view class="attachment-info">
+          <text class="attachment-name">{{item.file_name}}</text>
+          <text class="attachment-size">{{(item.file_size / 1024).toFixed(2)}} KB</text>
+        </view>
+        <view class="attachment-actions">
+          <text class="delete-btn" bindtap="onDeleteAttachment" data-index="{{index}}">删除</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="tips">
+    <text>提示：可以上传图片、视频或文件作为问题证据</text>
+  </view>
+
+  <view class="footer">
+    <button class="btn btn-default prev-btn" bindtap="onPrev">上一步</button>
+    <button class="btn btn-primary next-btn" bindtap="onNext">下一步</button>
+  </view>
+</view>
+

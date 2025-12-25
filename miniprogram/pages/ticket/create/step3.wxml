@@ -1,0 +1,123 @@
+<!--step3.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="step-title">步骤 3/5：事实表填写</text>
+  </view>
+
+  <view class="form-section">
+    <view class="form-item">
+      <text class="form-label">问题描述（一句话）*</text>
+      <input
+        class="form-input"
+        placeholder="一句话描述问题现象，不含判断（至少10个字符）"
+        value="{{symptomTitle}}"
+        bindinput="onSymptomTitleInput"
+        maxlength="200"
+      />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">详细描述（可选）</text>
+      <textarea
+        class="form-textarea"
+        placeholder="详细描述问题现象"
+        value="{{symptomDetail}}"
+        bindinput="onSymptomDetailInput"
+        maxlength="1000"
+      />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">复现率 (%)</text>
+      <input
+        class="form-input"
+        type="number"
+        placeholder="0-100"
+        value="{{reproRate}}"
+        bindinput="onReproRateInput"
+      />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">重启是否恢复</text>
+      <switch checked="{{rebootRecovers}}" bindchange="onRebootRecoversChange" />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">是否与环境相关</text>
+      <switch checked="{{envRelated}}" bindchange="onEnvRelatedChange" />
+    </view>
+
+    <view class="facts-section">
+      <text class="section-title">事实表</text>
+      <view class="facts-list">
+        <view class="fact-item" wx:for="{{questions}}" wx:key="key">
+          <text class="fact-label">{{item.label}}{{item.required ? ' *' : ''}}</text>
+          
+          <!-- YES/NO/NA 类型 -->
+          <view class="fact-options" wx:if="{{item.type === 'yes_no_na'}}">
+            <view
+              class="fact-option {{facts[item.key] === 'yes' ? 'active' : ''}}"
+              bindtap="onFactChange"
+              data-key="{{item.key}}"
+              data-value="yes"
+            >
+              是
+            </view>
+            <view
+              class="fact-option {{facts[item.key] === 'no' ? 'active' : ''}}"
+              bindtap="onFactChange"
+              data-key="{{item.key}}"
+              data-value="no"
+            >
+              否
+            </view>
+            <view
+              class="fact-option {{facts[item.key] === 'na' ? 'active' : ''}}"
+              bindtap="onFactChange"
+              data-key="{{item.key}}"
+              data-value="na"
+            >
+              不适用
+            </view>
+          </view>
+
+          <!-- 文本类型 -->
+          <input
+            wx:elif="{{item.type === 'text'}}"
+            class="form-input"
+            placeholder="请输入{{item.label}}"
+            value="{{facts[item.key]}}"
+            bindinput="onFactTextInput"
+            data-key="{{item.key}}"
+          />
+
+          <!-- 数字类型 -->
+          <input
+            wx:elif="{{item.type === 'number'}}"
+            class="form-input"
+            type="number"
+            placeholder="请输入{{item.label}}"
+            value="{{facts[item.key]}}"
+            bindinput="onFactNumberInput"
+            data-key="{{item.key}}"
+          />
+
+          <!-- 布尔类型 -->
+          <switch
+            wx:elif="{{item.type === 'boolean'}}"
+            checked="{{facts[item.key]}}"
+            bindchange="onFactBooleanChange"
+            data-key="{{item.key}}"
+          />
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="btn btn-default prev-btn" bindtap="onPrev">上一步</button>
+    <button class="btn btn-primary next-btn" bindtap="onNext">下一步</button>
+  </view>
+</view>
+

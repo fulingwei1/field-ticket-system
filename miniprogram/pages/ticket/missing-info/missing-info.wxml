@@ -1,0 +1,110 @@
+<!--missing-info.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">信息补全</text>
+    <text class="subtitle" wx:if="{{hasCriticalMissing}}">有关键信息缺失</text>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <view class="content" wx:else>
+    <view class="tips" wx:if="{{hasCriticalMissing}}">
+      <text>为了更准确地诊断问题，请补充以下关键信息</text>
+    </view>
+
+    <view class="questions-list">
+      <view class="question-item" wx:for="{{questions}}" wx:key="questionId">
+        <view class="question-header">
+          <text class="question-text">{{item.question}}</text>
+          <text class="required-tag" wx:if="{{item.required}}">必填</text>
+        </view>
+        <view class="question-hint" wx:if="{{item.hint}}">
+          <text>{{item.hint}}</text>
+        </view>
+
+        <!-- yes_no 类型 -->
+        <view class="answer-options" wx:if="{{item.type === 'yes_no'}}">
+          <view
+            class="answer-option {{answers[item.questionId] === 'yes' ? 'active' : ''}}"
+            bindtap="onAnswerChange"
+            data-question-id="{{item.questionId}}"
+            data-value="yes"
+          >
+            是
+          </view>
+          <view
+            class="answer-option {{answers[item.questionId] === 'no' ? 'active' : ''}}"
+            bindtap="onAnswerChange"
+            data-question-id="{{item.questionId}}"
+            data-value="no"
+          >
+            否
+          </view>
+          <view
+            class="answer-option {{answers[item.questionId] === 'unknown' ? 'active' : ''}}"
+            bindtap="onAnswerChange"
+            data-question-id="{{item.questionId}}"
+            data-value="unknown"
+          >
+            不清楚
+          </view>
+        </view>
+
+        <!-- number 类型 -->
+        <input
+          wx:if="{{item.type === 'number'}}"
+          class="answer-input"
+          type="number"
+          placeholder="请输入数字"
+          value="{{answers[item.questionId]}}"
+          bindinput="onAnswerInput"
+          data-question-id="{{item.questionId}}"
+        />
+
+        <!-- text 类型 -->
+        <textarea
+          wx:if="{{item.type === 'text'}}"
+          class="answer-textarea"
+          placeholder="请输入文本"
+          value="{{answers[item.questionId]}}"
+          bindinput="onAnswerInput"
+          data-question-id="{{item.questionId}}"
+          maxlength="1000"
+        />
+
+        <!-- select 类型 -->
+        <picker
+          wx:if="{{item.type === 'select'}}"
+          mode="selector"
+          range="{{item.options}}"
+          value="{{answers[item.questionId]}}"
+          bindchange="onSelectChange"
+          data-question-id="{{item.questionId}}"
+        >
+          <view class="picker">
+            {{answers[item.questionId] !== undefined ? item.options[answers[item.questionId]] : '请选择'}}
+          </view>
+        </picker>
+
+        <!-- file 类型 -->
+        <view wx:if="{{item.type === 'file'}}" class="file-upload">
+          <button class="btn btn-default upload-btn" bindtap="onFileUpload" data-question-id="{{item.questionId}}">
+            上传文件
+          </button>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="btn btn-default skip-btn" bindtap="onSkip" disabled="{{hasCriticalMissing}}">
+      跳过
+    </button>
+    <button class="btn btn-primary submit-btn" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">
+      {{submitting ? '提交中...' : '完成补全'}}
+    </button>
+  </view>
+</view>
+

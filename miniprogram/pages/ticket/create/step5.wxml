@@ -1,0 +1,61 @@
+<!--step5.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="step-title">步骤 5/5：预览确认</text>
+  </view>
+
+  <view class="preview-section">
+    <view class="preview-card">
+      <text class="card-title">设备信息</text>
+      <view class="card-content">
+        <text>设备名称：{{device.device_name}}</text>
+        <text>设备SN：{{device.device_sn}}</text>
+        <text wx:if="{{device.customer_name}}">客户：{{device.customer_name}}</text>
+      </view>
+    </view>
+
+    <view class="preview-card">
+      <text class="card-title">问题域和步骤</text>
+      <view class="card-content">
+        <text>问题域：{{step2Data.domain}}</text>
+        <text>步骤代码：{{step2Data.stepCode}}</text>
+        <text wx:if="{{step2Data.stepName}}">步骤名称：{{step2Data.stepName}}</text>
+        <text>软件版本：{{step2Data.swVersion}}</text>
+        <text>PLC版本：{{step2Data.plcVersion}}</text>
+        <text>参数版本：{{step2Data.paramVersion}}</text>
+      </view>
+    </view>
+
+    <view class="preview-card">
+      <text class="card-title">问题描述</text>
+      <view class="card-content">
+        <text>{{step3Data.symptomTitle}}</text>
+        <text wx:if="{{step3Data.symptomDetail}}" class="detail-text">
+          {{step3Data.symptomDetail}}
+        </text>
+        <text>复现率：{{step3Data.reproRate}}%</text>
+        <text>重启恢复：{{step3Data.rebootRecovers ? '是' : '否'}}</text>
+        <text>环境相关：{{step3Data.envRelated ? '是' : '否'}}</text>
+      </view>
+    </view>
+
+    <view class="preview-card" wx:if="{{attachments.length > 0}}">
+      <text class="card-title">附件（{{attachments.length}}）</text>
+      <view class="card-content">
+        <text wx:for="{{attachments}}" wx:key="id" class="attachment-item">
+          {{item.file_name}} ({{(item.file_size / 1024).toFixed(2)}} KB)
+        </text>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="btn btn-default prev-btn" bindtap="onPrev" disabled="{{submitting}}">
+      上一步
+    </button>
+    <button class="btn btn-primary submit-btn" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">
+      {{submitting ? '提交中...' : '提交工单'}}
+    </button>
+  </view>
+</view>
+

@@ -1,0 +1,28 @@
+version: '3.8'
+
+# Development overrides for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    volumes:
+      - ./backend/src:/src/src:ro
+    # Enable hot reload (requires dotnet watch)
+    # command: dotnet watch --project /src/src/FieldTicket.Api/FieldTicket.Api.csproj
+
+  web:
+    build:
+      context: ./web-admin
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./web-admin/src:/app/src
+      - ./web-admin/public:/app/public
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    # Use development server instead of nginx
+    # command: npm start
+
+

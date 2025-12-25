@@ -1,0 +1,25 @@
+<!--login.wxml-->
+<view class="container">
+  <view class="login-container">
+    <view class="logo">
+      <image src="/images/logo.png" mode="aspectFit" class="logo-image"></image>
+    </view>
+    
+    <view class="title">现场问题反馈系统</view>
+    <view class="subtitle">企业微信小程序版</view>
+    
+    <button 
+      class="btn btn-primary login-btn" 
+      bindtap="handleLogin"
+      loading="{{loading}}"
+      disabled="{{loading}}"
+    >
+      {{loading ? '登录中...' : '企业微信登录'}}
+    </button>
+    
+    <view class="tips">
+      <text>使用企业微信账号登录</text>
+    </view>
+  </view>
+</view>
+

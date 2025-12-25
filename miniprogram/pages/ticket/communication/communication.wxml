@@ -1,0 +1,100 @@
+<!--客户沟通记录页面-->
+<view class="container">
+  <view wx:if="{{loadingData}}" class="loading-container">
+    <text>加载中...</text>
+  </view>
+
+  <view wx:else class="content">
+    <!-- 工单信息 -->
+    <view class="section">
+      <view class="section-title">工单信息</view>
+      <view class="info-item">
+        <text class="label">工单号：</text>
+        <text class="value">{{ticket.ticket_no}}</text>
+      </view>
+    </view>
+
+    <!-- 沟通记录列表 -->
+    <view class="section">
+      <view class="section-header">
+        <view class="section-title">沟通记录</view>
+        <button class="add-btn" bindtap="showAddModal">新增记录</button>
+      </view>
+
+      <view wx:if="{{communications.length === 0}}" class="empty">
+        <text>暂无沟通记录</text>
+      </view>
+
+      <view wx:else class="communication-list">
+        <view
+          wx:for="{{communications}}"
+          wx:key="id"
+          class="communication-item"
+        >
+          <view class="communication-header">
+            <view class="communication-type">
+              <text class="type-tag type-{{item.type}}">
+                {{item.type === 'call' ? '电话' : item.type === 'message' ? '消息' : item.type === 'email' ? '邮件' : '其他'}}
+              </text>
+            </view>
+            <view class="communication-meta">
+              <text class="creator">{{item.created_by_name || '未知'}}</text>
+              <text class="time">{{item.created_at}}</text>
+            </view>
+          </view>
+          <view class="communication-content">
+            <text>{{item.content}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 添加沟通记录弹窗 -->
+  <view wx:if="{{showAddModal}}" class="modal" catchtap="hideAddModal">
+    <view class="modal-content" catchtap="stopPropagation">
+      <view class="modal-header">
+        <text class="modal-title">新增沟通记录</text>
+        <text class="modal-close" bindtap="hideAddModal">×</text>
+      </view>
+      <view class="modal-body">
+        <view class="form-item">
+          <text class="label">沟通类型：</text>
+          <picker
+            mode="selector"
+            range="{{['电话', '消息', '邮件', '其他']}}"
+            range-key=""
+            value="{{newCommunication.type === 'call' ? 0 : newCommunication.type === 'message' ? 1 : newCommunication.type === 'email' ? 2 : 3}}"
+            bindchange="onTypeChange"
+          >
+            <view class="picker">
+              <text>{{newCommunication.type === 'call' ? '电话' : newCommunication.type === 'message' ? '消息' : newCommunication.type === 'email' ? '邮件' : '其他'}}</text>
+            </view>
+          </picker>
+        </view>
+        <view class="form-item">
+          <text class="label">沟通内容：</text>
+          <textarea
+            value="{{newCommunication.content}}"
+            bindinput="onContentInput"
+            placeholder="请输入沟通内容"
+            class="textarea"
+            maxlength="1000"
+          />
+        </view>
+      </view>
+      <view class="modal-footer">
+        <button class="cancel-btn" bindtap="hideAddModal">取消</button>
+        <button
+          class="submit-btn"
+          bindtap="submitCommunication"
+          loading="{{loading}}"
+          disabled="{{loading}}"
+        >
+          提交
+        </button>
+      </view>
+    </view>
+  </view>
+</view>
+
