@@ -124,10 +124,10 @@ public class DuplicateDetectionService : IDuplicateDetectionService
         sourceTicket.UpdatedAt = DateTime.UtcNow;
 
         // 合并附件（如果有）
-        // TODO: 实现附件合并逻辑
+        await MergeAttachmentsAsync(sourceTicketId, targetTicketId);
 
         // 合并沟通记录（如果有）
-        // TODO: 实现沟通记录合并逻辑
+        await MergeCommunicationsAsync(sourceTicketId, targetTicketId);
 
         await _dbContext.SaveChangesAsync();
 
@@ -371,6 +371,66 @@ public class DuplicateDetectionService : IDuplicateDetectionService
         catch (Exception ex)
         {
             _logger.LogError(ex, "记录去重检测日志失败，工单：{TicketId}", ticketId);
+        }
+    }
+
+    /// <summary>
+    /// 合并附件：将源工单的附件关联到目标工单
+    /// </summary>
+    private async Task MergeAttachmentsAsync(Guid sourceTicketId, Guid targetTicketId)
+    {
+        try
+        {
+            var attachments = await _dbContext.Attachments
+                .Where(a => a.TicketId == sourceTicketId)
+                .ToListAsync();
+
+            if (attachments.Any())
+            {
+                foreach (var attachment in attachments)
+                {
+                    attachment.TicketId = targetTicketId;
+                }
+
+                _logger.LogInformation("合并附件：将工单 {SourceTicketId} 的 {Count} 个附件合并到工单 {TargetTicketId}",
+                    sourceTicketId, attachments.Count, targetTicketId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "合并附件失败，源工单：{SourceTicketId}，目标工单：{TargetTicketId}",
+                sourceTicketId, targetTicketId);
+            // 不抛出异常，允许合并流程继续
+        }
+    }
+
+    /// <summary>
+    /// 合并沟通记录：将源工单的沟通记录关联到目标工单
+    /// </summary>
+    private async Task MergeCommunicationsAsync(Guid sourceTicketId, Guid targetTicketId)
+    {
+        try
+        {
+            var communications = await _dbContext.CustomerCommunications
+                .Where(c => c.TicketId == sourceTicketId)
+                .ToListAsync();
+
+            if (communications.Any())
+            {
+                foreach (var communication in communications)
+                {
+                    communication.TicketId = targetTicketId;
+                }
+
+                _logger.LogInformation("合并沟通记录：将工单 {SourceTicketId} 的 {Count} 条沟通记录合并到工单 {TargetTicketId}",
+                    sourceTicketId, communications.Count, targetTicketId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "合并沟通记录失败，源工单：{SourceTicketId}，目标工单：{TargetTicketId}",
+                sourceTicketId, targetTicketId);
+            // 不抛出异常，允许合并流程继续
         }
     }
 }

@@ -61,13 +61,16 @@ public class TicketService : ITicketService
             }
         }
 
+        // 从同一设备的其他工单中获取 CustomerId 和 ProjectId
+        var (customerId, projectId) = await GetCustomerAndProjectFromDeviceAsync(request.DeviceId);
+
         // 生成工单编号（草稿时先不生成，提交时生成）
         var ticket = new Ticket
         {
             TicketId = Guid.NewGuid(),
             TicketNo = string.Empty, // 提交时生成
-            CustomerId = Guid.Empty, // TODO: 从设备获取
-            ProjectId = Guid.Empty, // TODO: 从设备获取
+            CustomerId = customerId,
+            ProjectId = projectId,
             DeviceId = request.DeviceId,
             StationId = request.StationId,
             CreatedByUserId = userId,
@@ -314,8 +317,14 @@ public class TicketService : ITicketService
         // 权限检查：FieldEngineer 只能看自己创建的工单
         if (userId.HasValue && ticket.CreatedByUserId != userId.Value)
         {
-            // TODO: 检查用户角色，如果是 FieldEngineer 则返回 null
-            // 这里暂时允许，后续在权限中间件中处理
+            // 检查用户角色，如果是 FieldEngineer 则返回 null
+            var user = await _dbContext.Users.FindAsync(userId.Value);
+            if (user != null && user.Role == "FieldEngineer")
+            {
+                // FieldEngineer 只能查看自己创建的工单
+                return null;
+            }
+            // 其他角色（Manager、Admin等）可以查看所有工单
         }
 
         return await MapToDtoAsync(ticket);
@@ -372,23 +381,90 @@ public class TicketService : ITicketService
             .Take(pageSize)
             .ToListAsync();
 
+        // 批量查询关联数据以优化性能
+        var ticketIds = tickets.Select(t => t.TicketId).ToList();
+        var customerIds = tickets.Where(t => t.CustomerId != Guid.Empty).Select(t => t.CustomerId).Distinct().ToList();
+        var projectIds = tickets.Where(t => t.ProjectId != Guid.Empty).Select(t => t.ProjectId).Distinct().ToList();
+        var deviceIds = tickets.Select(t => t.DeviceId).Distinct().ToList();
+        var userIds = tickets.Select(t => t.CreatedByUserId).Distinct().ToList();
+
+        // 查询 Projects（用于获取 CustomerName）
+        var projects = await _dbContext.Projects
+            .Where(p => projectIds.Contains(p.ProjectId))
+            .Select(p => new { p.ProjectId, p.CustomerName })
+            .ToListAsync();
+
+        var projectDict = projects.ToDictionary(p => p.ProjectId, p => p.CustomerName ?? string.Empty);
+
+        // 查询 Users（用于获取 CreatedByName）
+        var users = await _dbContext.Users
+            .Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.Name })
+            .ToListAsync();
+
+        var userDict = users.ToDictionary(u => u.Id, u => u.Name ?? string.Empty);
+
+        // 查询同一设备的其他工单（用于获取 DeviceSn）
+        var deviceSnDict = new Dictionary<Guid, string>();
+        var ticketsWithoutDeviceSn = tickets.Where(t => string.IsNullOrEmpty(t.DeviceSn)).ToList();
+        if (ticketsWithoutDeviceSn.Any())
+        {
+            var deviceIdsToQuery = ticketsWithoutDeviceSn.Select(t => t.DeviceId).Distinct().ToList();
+            var deviceSnFromTickets = await _dbContext.Tickets
+                .Where(t => deviceIdsToQuery.Contains(t.DeviceId) && !string.IsNullOrEmpty(t.DeviceSn))
+                .GroupBy(t => t.DeviceId)
+                .Select(g => new { DeviceId = g.Key, DeviceSn = g.OrderByDescending(t => t.CreatedAt).First().DeviceSn })
+                .ToListAsync();
+
+            foreach (var item in deviceSnFromTickets)
+            {
+                deviceSnDict[item.DeviceId] = item.DeviceSn ?? string.Empty;
+            }
+        }
+
         var items = tickets.Select(t => new TicketListItemDto
         {
             TicketId = t.TicketId,
             TicketNo = t.TicketNo,
-            CustomerName = string.Empty, // TODO: 关联查询
-            DeviceSn = string.Empty, // TODO: 关联查询
+            CustomerName = !string.IsNullOrEmpty(t.CustomerName)
+                ? t.CustomerName
+                : (projectDict.TryGetValue(t.ProjectId, out var projectCustomerName) ? projectCustomerName : string.Empty),
+            DeviceSn = !string.IsNullOrEmpty(t.DeviceSn)
+                ? t.DeviceSn
+                : (deviceSnDict.TryGetValue(t.DeviceId, out var deviceSn) ? deviceSn : string.Empty),
             Domain = t.Domain,
             StepCode = t.StepCode,
             SymptomTitle = t.SymptomTitle,
             Status = t.Status,
             Priority = t.Priority,
-            CreatedByName = string.Empty, // TODO: 关联查询
+            CreatedByName = userDict.TryGetValue(t.CreatedByUserId, out var userName) ? userName : string.Empty,
             CreatedAt = t.CreatedAt,
             SubmittedAt = t.SubmittedAt
         }).ToList();
 
         return (items, total);
+    }
+
+    /// <summary>
+    /// 从同一设备的其他工单中获取 CustomerId 和 ProjectId
+    /// </summary>
+    private async Task<(Guid CustomerId, Guid ProjectId)> GetCustomerAndProjectFromDeviceAsync(Guid deviceId)
+    {
+        // 从同一设备的最新工单中获取 CustomerId 和 ProjectId
+        var latestTicket = await _dbContext.Tickets
+            .Where(t => t.DeviceId == deviceId &&
+                       t.CustomerId != Guid.Empty &&
+                       t.ProjectId != Guid.Empty)
+            .OrderByDescending(t => t.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (latestTicket != null)
+        {
+            return (latestTicket.CustomerId, latestTicket.ProjectId);
+        }
+
+        // 如果没有找到，返回空 GUID
+        return (Guid.Empty, Guid.Empty);
     }
 
     private async Task<TicketDto> MapToDtoAsync(Ticket ticket)

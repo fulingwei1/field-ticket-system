@@ -79,8 +79,8 @@ public static class WeComContactEndpoints
 
     private static async Task<IResult> GetDepartmentUsers(
         int departmentId,
-        [FromQuery] bool fetchChild = false,
-        IWeComContactService service = null!)
+        IWeComContactService service = null!,
+        [FromQuery] bool fetchChild = false)
     {
         try
         {

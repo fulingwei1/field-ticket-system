@@ -44,8 +44,8 @@ public class UserProfileService : IUserProfileService
         var commonFields = AnalyzeCommonFields(tickets, fillingHistory);
 
         // 计算专业度
-        var expertiseScore = CalculateExpertiseScore(tickets, fillingHistory);
-        var expertiseLevel = DetermineExpertiseLevel(expertiseScore);
+        var expertiseScore = await CalculateExpertiseScoreAsync(userId, tickets, fillingHistory);
+        var expertiseLevel = expertiseScore.HasValue ? DetermineExpertiseLevel(expertiseScore.Value) : null;
 
         // 计算平均完成时间
         var avgCompletionTime = fillingHistory
@@ -55,7 +55,7 @@ public class UserProfileService : IUserProfileService
             .Average();
 
         // 分析常见错误
-        var commonMistakes = AnalyzeCommonMistakes(tickets, fillingHistory);
+        var commonMistakes = await AnalyzeCommonMistakesAsync(userId, tickets, fillingHistory);
 
         // 获取或创建用户画像
         var profile = await _dbContext.UserProfiles
@@ -273,15 +273,20 @@ public class UserProfileService : IUserProfileService
         return commonFields;
     }
 
-    private decimal CalculateExpertiseScore(
+    private async Task<decimal?> CalculateExpertiseScoreAsync(
+        Guid userId,
         List<Ticket> tickets,
         List<UserFillingHistory> fillingHistory)
     {
         var score = 0.0m;
+        var hasData = false;
+        var totalWeight = 0.0m;
 
         // 1. 工单数量（权重30%）
         var ticketCountScore = Math.Min(tickets.Count / 100.0m, 1.0m);
         score += ticketCountScore * 0.3m;
+        totalWeight += 0.3m;
+        hasData = true; // 至少有一个工单就算有数据
 
         // 2. 平均完成时间（权重20%）
         if (fillingHistory.Any(h => h.FillingTime.HasValue))
@@ -291,19 +296,106 @@ public class UserProfileService : IUserProfileService
                 .Average(h => h.FillingTime!.Value);
             var timeScore = avgTime < 300 ? 1.0m : Math.Max(0.0m, 1.0m - ((decimal)avgTime - 300) / 600.0m);
             score += timeScore * 0.2m;
+            totalWeight += 0.2m;
         }
 
         // 3. 错误率（权重30%）
-        // TODO: 需要从验证结果中计算错误率
-        var errorRate = 0.1m; // 默认值
-        score += (1.0m - errorRate) * 0.3m;
+        var errorRate = await CalculateErrorRateAsync(userId, tickets);
+        if (errorRate.HasValue)
+        {
+            score += (1.0m - errorRate.Value) * 0.3m;
+            totalWeight += 0.3m;
+        }
 
         // 4. 知识掌握度（权重20%）
-        // TODO: 需要从判断卡使用情况计算
-        var knowledgeScore = 0.7m; // 默认值
-        score += knowledgeScore * 0.2m;
+        var knowledgeScore = await CalculateKnowledgeScoreAsync(userId);
+        if (knowledgeScore.HasValue)
+        {
+            score += knowledgeScore.Value * 0.2m;
+            totalWeight += 0.2m;
+        }
 
-        return Math.Min(1.0m, score);
+        // 如果没有任何有效数据，返回 null
+        if (!hasData && totalWeight == 0)
+        {
+            return null;
+        }
+
+        // 如果数据不足（权重总和小于0.5），返回 null 表示数据不足
+        if (totalWeight < 0.5m)
+        {
+            return null;
+        }
+
+        // 按实际权重归一化分数
+        var normalizedScore = totalWeight > 0 ? score / totalWeight : 0m;
+        return Math.Min(1.0m, normalizedScore);
+    }
+
+    /// <summary>
+    /// 计算用户错误率（基于验证结果）
+    /// 如果数据不足，返回 null 表示无法计算
+    /// </summary>
+    private async Task<decimal?> CalculateErrorRateAsync(Guid userId, List<Ticket> tickets)
+    {
+        if (!tickets.Any())
+        {
+            return null; // 没有工单数据，无法计算错误率
+        }
+
+        var ticketIds = tickets.Select(t => t.TicketId).ToList();
+        var verifications = await _dbContext.Verifications
+            .Where(v => ticketIds.Contains(v.TicketId) && v.ExecutedBy == userId)
+            .ToListAsync();
+
+        if (!verifications.Any())
+        {
+            return null; // 没有验证记录，无法计算错误率
+        }
+
+        // 计算失败率：FAIL 和 PARTIAL 都算作错误
+        var totalRuns = verifications.Sum(v => v.RunCount);
+        var totalFails = verifications.Sum(v => v.FailCount);
+        var partialCount = verifications.Count(v => v.Result == "PARTIAL");
+
+        // 错误率 = (失败次数 + 部分通过次数 * 0.5) / 总验证次数
+        if (totalRuns == 0)
+        {
+            return null; // 没有验证运行记录，无法计算错误率
+        }
+
+        var errorRate = (decimal)(totalFails + partialCount * 0.5) / totalRuns;
+        return Math.Min(1.0m, Math.Max(0.0m, errorRate));
+    }
+
+    /// <summary>
+    /// 计算知识掌握度（基于判断卡使用情况）
+    /// 如果数据不足，返回 null 表示无法计算
+    /// </summary>
+    private async Task<decimal?> CalculateKnowledgeScoreAsync(Guid userId)
+    {
+        var usageHistories = await _dbContext.JudgementCardUsageHistories
+            .Where(h => h.UsedBy == userId && h.IsValid)
+            .OrderByDescending(h => h.UsedAt)
+            .Take(50) // 最近50次使用
+            .ToListAsync();
+
+        if (!usageHistories.Any())
+        {
+            return null; // 没有使用记录，无法计算知识掌握度
+        }
+
+        // 计算正确率：correct 结果占比
+        var correctCount = usageHistories.Count(h => h.Result == "correct");
+        var totalCount = usageHistories.Count(h => !string.IsNullOrEmpty(h.Result));
+
+        if (totalCount == 0)
+        {
+            return null; // 没有结果记录，无法计算知识掌握度
+        }
+
+        var knowledgeScore = (decimal)correctCount / totalCount;
+        return Math.Min(1.0m, Math.Max(0.0m, knowledgeScore));
     }
 
     private string DetermineExpertiseLevel(decimal score)
@@ -313,12 +405,116 @@ public class UserProfileService : IUserProfileService
         return "beginner";
     }
 
-    private Dictionary<string, object>? AnalyzeCommonMistakes(
+    private async Task<Dictionary<string, object>?> AnalyzeCommonMistakesAsync(
+        Guid userId,
         List<Ticket> tickets,
         List<UserFillingHistory> fillingHistory)
     {
-        // TODO: 实现常见错误分析
-        return null;
+        var mistakes = new Dictionary<string, object>();
+        var mistakeTypes = new List<string>();
+
+        // 1. 分析验证失败的原因
+        var ticketIds = tickets.Select(t => t.TicketId).ToList();
+        var failedVerifications = await _dbContext.Verifications
+            .Where(v => ticketIds.Contains(v.TicketId) && 
+                       v.ExecutedBy == userId && 
+                       (v.Result == "FAIL" || v.Result == "PARTIAL"))
+            .ToListAsync();
+
+        if (failedVerifications.Any())
+        {
+            var failRate = (decimal)failedVerifications.Count / tickets.Count;
+            if (failRate > 0.2m) // 失败率超过20%
+            {
+                mistakeTypes.Add("验证失败率较高");
+            }
+        }
+
+        // 2. 分析工单填写完整性
+        var incompleteTickets = tickets.Count(t => 
+            string.IsNullOrEmpty(t.SymptomTitle) || 
+            string.IsNullOrEmpty(t.SymptomDetail));
+        
+        if (incompleteTickets > tickets.Count * 0.3m) // 超过30%的工单不完整
+        {
+            mistakeTypes.Add("工单信息填写不完整");
+        }
+
+        // 3. 分析填写时间异常
+        var slowFilling = fillingHistory
+            .Where(h => h.FillingTime.HasValue && h.FillingTime.Value > 600) // 超过10分钟
+            .Count();
+        
+        if (slowFilling > fillingHistory.Count * 0.3m) // 超过30%的填写时间过长
+        {
+            mistakeTypes.Add("填写时间过长，可能存在理解困难");
+        }
+
+        // 4. 分析跳过的字段
+        var skippedFields = new Dictionary<string, int>();
+        foreach (var history in fillingHistory.Where(h => h.SkippedFields != null))
+        {
+            if (history.SkippedFields != null)
+            {
+                var root = history.SkippedFields.RootElement;
+                foreach (var prop in root.EnumerateObject())
+                {
+                    if (!skippedFields.ContainsKey(prop.Name))
+                    {
+                        skippedFields[prop.Name] = 0;
+                    }
+                    skippedFields[prop.Name]++;
+                }
+            }
+        }
+
+        if (skippedFields.Any())
+        {
+            var mostSkipped = skippedFields.OrderByDescending(kv => kv.Value).First();
+            if (mostSkipped.Value > fillingHistory.Count * 0.5m) // 超过50%的情况跳过
+            {
+                mistakeTypes.Add($"经常跳过字段：{mostSkipped.Key}");
+            }
+        }
+
+        if (mistakeTypes.Any())
+        {
+            mistakes["mistake_types"] = mistakeTypes;
+            mistakes["total_mistakes"] = mistakeTypes.Count;
+            mistakes["improvement_suggestions"] = GenerateImprovementSuggestions(mistakeTypes);
+        }
+
+        return mistakes.Any() ? mistakes : null;
+    }
+
+    /// <summary>
+    /// 生成改进建议
+    /// </summary>
+    private List<string> GenerateImprovementSuggestions(List<string> mistakeTypes)
+    {
+        var suggestions = new List<string>();
+
+        if (mistakeTypes.Contains("验证失败率较高"))
+        {
+            suggestions.Add("建议在验证前仔细阅读解决方案，确保理解操作步骤");
+        }
+
+        if (mistakeTypes.Contains("工单信息填写不完整"))
+        {
+            suggestions.Add("建议填写完整的症状描述和问题详情，有助于快速定位问题");
+        }
+
+        if (mistakeTypes.Contains("填写时间过长，可能存在理解困难"))
+        {
+            suggestions.Add("建议参考历史工单模板，或使用智能预填充功能提高填写效率");
+        }
+
+        if (mistakeTypes.Any(m => m.Contains("经常跳过字段")))
+        {
+            suggestions.Add("建议填写所有必填字段，完整的信息有助于问题快速解决");
+        }
+
+        return suggestions;
     }
 
     private UserProfileDto MapToDto(UserProfile profile)

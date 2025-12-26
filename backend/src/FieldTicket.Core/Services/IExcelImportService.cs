@@ -21,7 +21,13 @@ public interface IExcelImportService
     /// 执行导入，保存到数据库
     /// </summary>
     Task<ImportExecutionResult> ExecuteImportAsync(ExcelImportResult importResult, Guid userId);
+
+    /// <summary>
+    /// 生成标准Excel模板
+    /// </summary>
+    Task<byte[]> GenerateTemplateAsync();
 }
+
 
 
 

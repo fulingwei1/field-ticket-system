@@ -190,10 +190,10 @@ public static class TicketEndpoints
             [FromQuery] Guid? createdBy,
             [FromQuery] DateTime? dateFrom,
             [FromQuery] DateTime? dateTo,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20,
             HttpContext context,
-            ITicketService ticketService) =>
+            ITicketService ticketService,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20) =>
         {
             var userId = GetUserId(context);
             

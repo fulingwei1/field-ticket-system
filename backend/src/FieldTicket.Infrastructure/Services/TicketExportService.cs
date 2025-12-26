@@ -3,6 +3,7 @@ using FieldTicket.Infrastructure.Data;
 using FieldTicket.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using OfficeOpenXml;
 using System.Text;
 
 namespace FieldTicket.Infrastructure.Services;
@@ -42,9 +43,8 @@ public class TicketExportService : ITicketExportService
 
         var exportFields = fields ?? defaultFields;
 
-        // 生成 CSV 格式（Excel 可以打开 CSV）
-        // TODO: 使用 EPPlus 或 ClosedXML 生成真正的 Excel 文件
-        return GenerateCsvData(items, exportFields);
+        // 使用 EPPlus 生成真正的 Excel 文件
+        return GenerateExcelData(items, exportFields);
     }
 
     public async Task<byte[]> ExportToCsvAsync(
@@ -176,7 +176,84 @@ public class TicketExportService : ITicketExportService
 
         return value;
     }
+
+    /// <summary>
+    /// 生成 Excel 数据
+    /// </summary>
+    private byte[] GenerateExcelData(List<TicketListItemDto> items, List<string> fields)
+    {
+        // 设置 EPPlus 许可证上下文（非商业使用）
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        using var package = new ExcelPackage();
+        var worksheet = package.Workbook.Worksheets.Add("工单列表");
+
+        // 字段名映射
+        var fieldMap = new Dictionary<string, (string Header, Func<TicketListItemDto, object> GetValue)>
+        {
+            ["ticketNo"] = ("工单编号", t => (object)(t.TicketNo ?? "草稿")),
+            ["status"] = ("状态", t => (object)(t.Status)),
+            ["domain"] = ("问题域", t => (object)t.Domain.ToString()),
+            ["stepCode"] = ("步骤代码", t => (object)(t.StepCode ?? "")),
+            ["symptomTitle"] = ("症状标题", t => (object)(t.SymptomTitle ?? "")),
+            ["priority"] = ("优先级", t => (object)(t.Priority ?? "P3")),
+            ["customerName"] = ("客户名称", t => (object)(t.CustomerName ?? "")),
+            ["deviceSn"] = ("设备SN", t => (object)(t.DeviceSn ?? "")),
+            ["createdByName"] = ("创建人", t => (object)(t.CreatedByName ?? "")),
+            ["createdAt"] = ("创建时间", t => (object)t.CreatedAt),
+        };
+
+        // 生成表头
+        var headers = fields
+            .Where(f => fieldMap.ContainsKey(f))
+            .Select(f => fieldMap[f].Header)
+            .ToList();
+
+        // 设置表头样式
+        var headerRange = worksheet.Cells[1, 1, 1, headers.Count];
+        headerRange.Style.Font.Bold = true;
+        headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+        headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+        headerRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+        // 写入表头
+        for (int i = 0; i < headers.Count; i++)
+        {
+            worksheet.Cells[1, i + 1].Value = headers[i];
+        }
+
+        // 写入数据
+        for (int row = 0; row < items.Count; row++)
+        {
+            var item = items[row];
+            int col = 1;
+
+            foreach (var field in fields.Where(f => fieldMap.ContainsKey(f)))
+            {
+                var value = fieldMap[field].GetValue(item);
+                worksheet.Cells[row + 2, col].Value = value;
+
+                // 格式化日期列
+                if (field == "createdAt" && value is DateTime dateTime)
+                {
+                    worksheet.Cells[row + 2, col].Style.Numberformat.Format = "yyyy-mm-dd hh:mm:ss";
+                }
+
+                col++;
+            }
+
+            // 设置边框
+            var rowRange = worksheet.Cells[row + 2, 1, row + 2, headers.Count];
+            rowRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+        }
+
+        // 自动调整列宽
+        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+        return package.GetAsByteArray();
+    }
 }
+
 
 
 

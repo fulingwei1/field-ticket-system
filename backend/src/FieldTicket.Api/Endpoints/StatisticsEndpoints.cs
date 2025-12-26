@@ -63,10 +63,10 @@ public static class StatisticsEndpoints
     /// 获取Top问题域统计
     /// </summary>
     private static async Task<IResult> GetTopDomains(
+        IStatisticsService service,
         [FromQuery] int topN = 5,
         [FromQuery] DateTime? fromDate = null,
-        [FromQuery] DateTime? toDate = null,
-        IStatisticsService service)
+        [FromQuery] DateTime? toDate = null)
     {
         try
         {
@@ -124,8 +124,8 @@ public static class StatisticsEndpoints
         [FromQuery] string metricType,
         [FromQuery] DateTime fromDate,
         [FromQuery] DateTime toDate,
-        [FromQuery] string groupBy = "day",
-        IStatisticsService service)
+        IStatisticsService service,
+        [FromQuery] string groupBy = "day")
     {
         try
         {

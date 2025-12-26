@@ -27,10 +27,10 @@ public static class PerformanceEndpoints
             [FromQuery] DateOnly? periodStartTo,
             [FromQuery] decimal? minOverallScore,
             [FromQuery] string? performanceLevel,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20,
             HttpContext context,
-            IPerformanceService performanceService) =>
+            IPerformanceService performanceService,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20) =>
         {
             var userId = GetUserId(context);
             if (userId == null)

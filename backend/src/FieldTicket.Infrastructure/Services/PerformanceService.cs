@@ -4,6 +4,7 @@ using FieldTicket.Infrastructure.Data;
 using FieldTicket.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using OfficeOpenXml;
 
 namespace FieldTicket.Infrastructure.Services;
 
@@ -14,13 +15,16 @@ public class PerformanceService : IPerformanceService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<PerformanceService> _logger;
+    private readonly ITicketStatusHistoryService _statusHistoryService;
 
     public PerformanceService(
         ApplicationDbContext dbContext,
-        ILogger<PerformanceService> logger)
+        ILogger<PerformanceService> logger,
+        ITicketStatusHistoryService statusHistoryService)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _statusHistoryService = statusHistoryService;
     }
 
     public async Task<PerformanceMetricsDto?> GetEngineerMetricsAsync(
@@ -76,8 +80,10 @@ public class PerformanceService : IPerformanceService
 
         if (filter.DepartmentId.HasValue)
         {
-            // TODO: 需要关联部门信息
-            // query = query.Where(m => m.Engineer.DeptId == filter.DepartmentId.Value);
+            // 关联部门信息：通过 Engineer.DeptId 筛选
+            query = query.Where(m => m.Engineer != null && 
+                m.Engineer.DeptId != null && 
+                m.Engineer.DeptId == filter.DepartmentId.Value.ToString());
         }
 
         if (!string.IsNullOrEmpty(filter.PeriodType))
@@ -130,8 +136,10 @@ public class PerformanceService : IPerformanceService
 
         if (departmentId.HasValue)
         {
-            // TODO: 需要关联部门信息
-            // query = query.Where(m => m.Engineer.DeptId == departmentId.Value);
+            // 关联部门信息：通过 Engineer.DeptId 筛选
+            query = query.Where(m => m.Engineer != null && 
+                m.Engineer.DeptId != null && 
+                m.Engineer.DeptId == departmentId.Value.ToString());
         }
 
         var metrics = await query
@@ -154,8 +162,10 @@ public class PerformanceService : IPerformanceService
 
         if (departmentId.HasValue)
         {
-            // TODO: 需要关联部门信息
-            // query = query.Where(m => m.Engineer.DeptId == departmentId.Value);
+            // 关联部门信息：通过 Engineer.DeptId 筛选
+            query = query.Where(m => m.Engineer != null && 
+                m.Engineer.DeptId != null && 
+                m.Engineer.DeptId == departmentId.Value.ToString());
         }
 
         var metrics = await query
@@ -305,9 +315,16 @@ public class PerformanceService : IPerformanceService
             metrics.AverageResolutionTime = TimeSpan.FromHours(totalTime / resolvedTickets.Count);
         }
 
-        // 计算一次解决率（需要根据业务逻辑判断）
-        // TODO: 需要根据工单历史判断是否为一次解决
-        var firstTimeResolved = resolvedTickets.Count; // 简化处理
+        // 计算一次解决率（根据工单状态历史判断）
+        var firstTimeResolved = 0;
+        foreach (var ticket in resolvedTickets)
+        {
+            if (await IsFirstTimeResolvedAsync(ticket.TicketId))
+            {
+                firstTimeResolved++;
+            }
+        }
+        
         if (metrics.TotalTickets > 0)
         {
             metrics.FirstTimeResolutionRate = (decimal)firstTimeResolved / metrics.TotalTickets * 100;
@@ -334,11 +351,70 @@ public class PerformanceService : IPerformanceService
         if (tickets.Any())
         {
             // 计算平均响应时间（从提交到首次响应）
-            // TODO: 需要工单响应记录表来计算准确的响应时间
-            var responseTimes = tickets
-                .Where(t => t.SubmittedAt.HasValue && t.UpdatedAt > t.SubmittedAt.Value)
-                .Select(t => (t.UpdatedAt - t.SubmittedAt!.Value).TotalHours)
-                .ToList();
+            // 首次响应定义为：从 Submitted 状态变为 Triage 状态的时间
+            var ticketIds = tickets.Select(t => t.TicketId).ToList();
+            
+            // 获取所有工单的状态历史
+            var statusHistories = await _dbContext.TicketStatusHistories
+                .Where(h => ticketIds.Contains(h.TicketId))
+                .OrderBy(h => h.ChangedAt)
+                .ToListAsync();
+
+            // 获取所有工单的分诊记录（作为备选方案）
+            var triageNotes = await _dbContext.TriageNotes
+                .Where(tn => ticketIds.Contains(tn.TicketId))
+                .GroupBy(tn => tn.TicketId)
+                .Select(g => new { TicketId = g.Key, FirstTriageAt = g.Min(tn => tn.CreatedAt) })
+                .ToListAsync();
+
+            var triageDict = triageNotes.ToDictionary(t => t.TicketId, t => t.FirstTriageAt);
+
+            var responseTimes = new List<double>();
+
+            foreach (var ticket in tickets.Where(t => t.SubmittedAt.HasValue))
+            {
+                DateTime? firstResponseTime = null;
+
+                // 方法1：从状态历史中查找首次从 Submitted 到 Triage 的变更
+                var firstTriageHistory = statusHistories
+                    .Where(h => h.TicketId == ticket.TicketId &&
+                               h.FromStatus == "Submitted" &&
+                               h.ToStatus == "Triage")
+                    .OrderBy(h => h.ChangedAt)
+                    .FirstOrDefault();
+
+                if (firstTriageHistory != null)
+                {
+                    firstResponseTime = firstTriageHistory.ChangedAt;
+                }
+                else
+                {
+                    // 方法2：从分诊记录中获取首次分诊时间
+                    if (triageDict.TryGetValue(ticket.TicketId, out var triageAt))
+                    {
+                        firstResponseTime = triageAt;
+                    }
+                    else if (ticket.AssignedTo.HasValue && ticket.Status == "Triage")
+                    {
+                        // 方法3：如果工单已分配且状态为 Triage，使用 UpdatedAt（降级方案）
+                        // 但需要确保 UpdatedAt 在 SubmittedAt 之后
+                        if (ticket.UpdatedAt > ticket.SubmittedAt!.Value)
+                        {
+                            firstResponseTime = ticket.UpdatedAt;
+                        }
+                    }
+                }
+
+                // 计算响应时间（小时）
+                if (firstResponseTime.HasValue && firstResponseTime.Value > ticket.SubmittedAt!.Value)
+                {
+                    var responseTimeHours = (firstResponseTime.Value - ticket.SubmittedAt.Value).TotalHours;
+                    if (responseTimeHours >= 0) // 确保响应时间非负
+                    {
+                        responseTimes.Add(responseTimeHours);
+                    }
+                }
+            }
 
             if (responseTimes.Any())
             {
@@ -380,8 +456,63 @@ public class PerformanceService : IPerformanceService
 
         metrics.DevicesServiced = devicesServiced;
 
-        // TODO: 计算设备故障率和重复故障率
-        // 需要根据业务逻辑判断故障设备数和重复故障
+        // 计算设备故障率和重复故障率
+        var tickets = await _dbContext.Tickets
+            .Where(t =>
+                t.CreatedByUserId == engineerId &&
+                t.CreatedAt >= startDate &&
+                t.CreatedAt <= endDate &&
+                t.Status != "Draft") // 排除草稿状态
+            .ToListAsync();
+
+        if (tickets.Any())
+        {
+            // 按设备分组，统计每个设备的故障次数
+            var deviceTicketCounts = tickets
+                .GroupBy(t => t.DeviceId)
+                .Select(g => new
+                {
+                    DeviceId = g.Key,
+                    TicketCount = g.Count(),
+                    Tickets = g.OrderBy(t => t.CreatedAt).ToList()
+                })
+                .ToList();
+
+            // 故障设备数：有工单的设备数量（排除草稿）
+            var faultyDevicesCount = deviceTicketCounts.Count;
+
+            // 计算设备故障率：故障设备数 / 服务设备总数
+            // 如果服务设备总数为0，则故障率为0
+            if (devicesServiced > 0)
+            {
+                metrics.DeviceFailureRate = (decimal)faultyDevicesCount / devicesServiced * 100;
+            }
+            else
+            {
+                metrics.DeviceFailureRate = 0;
+            }
+
+            // 计算重复故障率：有重复故障的设备数 / 故障设备总数
+            // 重复故障定义为：同一设备在统计周期内出现2次或以上故障
+            var repeatFailureDevices = deviceTicketCounts
+                .Where(d => d.TicketCount >= 2)
+                .ToList();
+
+            if (faultyDevicesCount > 0)
+            {
+                var repeatFailureRate = (decimal)repeatFailureDevices.Count / faultyDevicesCount * 100;
+                // 注意：PerformanceMetrics 实体可能没有 RepeatFailureRate 字段
+                // 如果需要，可以添加到实体中，这里先计算但不保存
+                _logger.LogInformation(
+                    "Engineer {EngineerId} repeat failure rate: {Rate}% ({RepeatDevices}/{TotalDevices})",
+                    engineerId, repeatFailureRate, repeatFailureDevices.Count, faultyDevicesCount);
+            }
+        }
+        else
+        {
+            // 没有工单，故障率为0
+            metrics.DeviceFailureRate = 0;
+        }
     }
 
     private async Task CalculateWorkActivityMetricsAsync(
@@ -459,10 +590,53 @@ public class PerformanceService : IPerformanceService
         DateOnly periodStart,
         DateOnly periodEnd)
     {
-        // TODO: 需要判断卡和解决方案表
-        // 计算判断卡创建数量、质量评分、复用贡献等
-        metrics.JudgementCardsCreated = 0;
-        metrics.SolutionsContributed = 0;
+        var startDate = periodStart.ToDateTime(TimeOnly.MinValue);
+        var endDate = periodEnd.ToDateTime(TimeOnly.MaxValue);
+
+        // 计算判断卡创建数量
+        var judgementCardsCreated = await _dbContext.JudgementCards
+            .Where(jc => jc.CreatedBy == engineerId &&
+                        jc.CreatedAt >= startDate &&
+                        jc.CreatedAt <= endDate)
+            .CountAsync();
+
+        metrics.JudgementCardsCreated = judgementCardsCreated;
+
+        // 计算解决方案贡献数量
+        var solutionsContributed = await _dbContext.Solutions
+            .Where(s => s.CreatedBy == engineerId &&
+                       s.CreatedAt >= startDate &&
+                       s.CreatedAt <= endDate)
+            .CountAsync();
+
+        metrics.SolutionsContributed = solutionsContributed;
+
+        // 计算判断卡使用准确率（基于使用历史）
+        var usageHistories = await _dbContext.JudgementCardUsageHistories
+            .Where(uh => uh.UsedBy == engineerId &&
+                        uh.UsedAt >= startDate &&
+                        uh.UsedAt <= endDate &&
+                        uh.IsValid)
+            .ToListAsync();
+
+        if (usageHistories.Any())
+        {
+            var correctCount = usageHistories.Count(uh => uh.Result == "correct");
+            metrics.JudgementCardUsageAccuracy = (decimal)correctCount / usageHistories.Count * 100;
+
+            // 计算判断卡命中率（使用次数 / 工单总数）
+            var tickets = await _dbContext.Tickets
+                .Where(t => t.CreatedByUserId == engineerId &&
+                           t.CreatedAt >= startDate &&
+                           t.CreatedAt <= endDate &&
+                           t.Status != "Draft")
+                .CountAsync();
+
+            if (tickets > 0)
+            {
+                metrics.JudgementCardHitRate = (decimal)usageHistories.Count / tickets * 100;
+            }
+        }
     }
 
     private async Task CalculateCustomerMetricsAsync(
@@ -505,9 +679,12 @@ public class PerformanceService : IPerformanceService
 
         if (closedTickets.Any())
         {
-            // TODO: 计算责任归因完成度（需要责任归因字段）
-            // 简化处理：假设所有已结案工单都已完成归因
-            metrics.RootCauseAttributionCompleteness = 100;
+            // 计算责任归因完成度：检查 RootCause 和 RootResponsibility 字段
+            var attributedTickets = closedTickets.Count(t =>
+                !string.IsNullOrEmpty(t.RootCause) &&
+                !string.IsNullOrEmpty(t.RootResponsibility));
+
+            metrics.RootCauseAttributionCompleteness = (decimal)attributedTickets / closedTickets.Count * 100;
         }
     }
 
@@ -621,8 +798,30 @@ public class PerformanceService : IPerformanceService
             metrics.RankInTeam = rank;
         }
 
-        // TODO: 计算部门排名（需要部门信息）
-        metrics.RankInDepartment = rank;
+        // 计算部门排名（需要部门信息）
+        if (metrics.Engineer != null && !string.IsNullOrEmpty(metrics.Engineer.DeptId))
+        {
+            var deptMetrics = await _dbContext.PerformanceMetrics
+                .Include(m => m.Engineer)
+                .Where(m =>
+                    m.PeriodType == periodType &&
+                    m.PeriodStart == periodStart &&
+                    m.OverallScore.HasValue &&
+                    m.Engineer != null &&
+                    m.Engineer.DeptId == metrics.Engineer.DeptId)
+                .OrderByDescending(m => m.OverallScore)
+                .ToListAsync();
+
+            var deptRank = deptMetrics.FindIndex(m => m.MetricId == metrics.MetricId) + 1;
+            if (deptRank > 0)
+            {
+                metrics.RankInDepartment = deptRank;
+            }
+        }
+        else
+        {
+            metrics.RankInDepartment = rank; // 如果没有部门信息，使用团队排名
+        }
     }
 
     #endregion
@@ -804,9 +1003,8 @@ public class PerformanceService : IPerformanceService
         }
         else // excel
         {
-            // TODO: 使用 EPPlus 或 ClosedXML 生成 Excel
-            // 暂时返回 CSV 格式
-            return GenerateCsvData(items);
+            // 使用 EPPlus 生成 Excel
+            return GenerateExcelData(items);
         }
     }
 
@@ -973,6 +1171,145 @@ public class PerformanceService : IPerformanceService
         }
 
         return System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+    }
+
+    /// <summary>
+    /// 生成 Excel 数据
+    /// </summary>
+    private byte[] GenerateExcelData(List<PerformanceMetricsDto> items)
+    {
+        // 设置 EPPlus 许可证上下文（非商业使用）
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        using var package = new ExcelPackage();
+        var worksheet = package.Workbook.Worksheets.Add("绩效数据");
+
+        // 设置表头
+        var headers = new[]
+        {
+            "工程师", "周期类型", "周期开始", "总工单数", "已解决工单数", "平均解决时间",
+            "一次解决率", "响应及时率", "综合评分", "绩效等级", "团队排名", "部门排名"
+        };
+
+        // 设置表头样式
+        for (int i = 0; i < headers.Length; i++)
+        {
+            worksheet.Cells[1, i + 1].Value = headers[i];
+            worksheet.Cells[1, i + 1].Style.Font.Bold = true;
+            worksheet.Cells[1, i + 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            worksheet.Cells[1, i + 1].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+            worksheet.Cells[1, i + 1].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+        }
+
+        // 写入数据
+        for (int row = 0; row < items.Count; row++)
+        {
+            var item = items[row];
+            int col = 1;
+
+            worksheet.Cells[row + 2, col++].Value = item.EngineerName ?? "未知";
+            worksheet.Cells[row + 2, col++].Value = item.PeriodType;
+            worksheet.Cells[row + 2, col++].Value = item.PeriodStart.ToString("yyyy-MM-dd");
+            worksheet.Cells[row + 2, col++].Value = item.TotalTickets;
+            worksheet.Cells[row + 2, col++].Value = item.TicketsResolved;
+            worksheet.Cells[row + 2, col++].Value = item.AverageResolutionTime?.ToString() ?? "N/A";
+            worksheet.Cells[row + 2, col++].Value = item.FirstTimeResolutionRate?.ToString("F2") ?? "N/A";
+            worksheet.Cells[row + 2, col++].Value = item.OnTimeResponseRate?.ToString("F2") ?? "N/A";
+            worksheet.Cells[row + 2, col++].Value = item.OverallScore?.ToString("F2") ?? "N/A";
+            worksheet.Cells[row + 2, col++].Value = item.PerformanceLevel ?? "N/A";
+            worksheet.Cells[row + 2, col++].Value = item.RankInTeam ?? 0;
+            worksheet.Cells[row + 2, col++].Value = item.RankInDepartment ?? 0;
+
+            // 设置边框
+            var rowRange = worksheet.Cells[row + 2, 1, row + 2, headers.Length];
+            rowRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+        }
+
+        // 自动调整列宽
+        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+        return package.GetAsByteArray();
+    }
+
+    /// <summary>
+    /// 判断工单是否为一次解决
+    /// 一次解决的定义：工单从 Submitted → SolutionIssued → Closed，且中间没有返工（Reopened）
+    /// </summary>
+    private async Task<bool> IsFirstTimeResolvedAsync(Guid ticketId)
+    {
+        try
+        {
+            // 获取工单状态历史
+            var statusHistories = await _statusHistoryService.GetStatusHistoryAsync(ticketId);
+            
+            if (!statusHistories.Any())
+            {
+                // 没有状态历史记录，无法判断，返回 false
+                return false;
+            }
+
+            // 按时间排序
+            var sortedHistories = statusHistories.OrderBy(h => h.ChangedAt).ToList();
+
+            // 检查是否经过 Reopened 状态（返工）
+            var hasReopened = sortedHistories.Any(h => h.ToStatus == "Reopened");
+            if (hasReopened)
+            {
+                // 有返工，不是一次解决
+                return false;
+            }
+
+            // 检查状态流转路径：Submitted → SolutionIssued → Closed
+            // 检查是否包含 Submitted 状态
+            var hasSubmitted = sortedHistories.Any(h => h.ToStatus == "Submitted" || h.FromStatus == "Submitted");
+            if (!hasSubmitted)
+            {
+                // 没有 Submitted 状态，可能是草稿直接关闭，不算一次解决
+                return false;
+            }
+
+            // 检查是否包含 SolutionIssued 状态
+            var hasSolutionIssued = sortedHistories.Any(h => h.ToStatus == "SolutionIssued");
+            if (!hasSolutionIssued)
+            {
+                // 没有发布方案，不算一次解决
+                return false;
+            }
+
+            // 检查最终状态是否为 Closed
+            var finalStatus = sortedHistories.Last().ToStatus;
+            if (finalStatus != "Closed")
+            {
+                // 最终状态不是 Closed，不算一次解决
+                return false;
+            }
+
+            // 检查状态流转顺序：Submitted 必须在 SolutionIssued 之前，SolutionIssued 必须在 Closed 之前
+            var submittedIndex = sortedHistories.FindIndex(h => h.ToStatus == "Submitted");
+            var solutionIssuedIndex = sortedHistories.FindIndex(h => h.ToStatus == "SolutionIssued");
+            var closedIndex = sortedHistories.FindIndex(h => h.ToStatus == "Closed");
+
+            // 如果找不到这些状态，返回 false
+            if (submittedIndex == -1 || solutionIssuedIndex == -1 || closedIndex == -1)
+            {
+                return false;
+            }
+
+            // 检查顺序：Submitted < SolutionIssued < Closed
+            if (submittedIndex < solutionIssuedIndex && solutionIssuedIndex < closedIndex)
+            {
+                // 符合一次解决的流程
+                return true;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "判断工单 {TicketId} 是否为一次解决时出错", ticketId);
+            // 出错时返回 false，避免误判
+            return false;
+        }
     }
 
     #endregion

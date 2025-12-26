@@ -49,6 +49,7 @@ Page({
     const step2Data = storageService.get('ticket_create_step2');
     const step3Data = storageService.get('ticket_create_step3');
     const attachments = storageService.get('ticket_create_attachments') || [];
+    const ticketId = storageService.get('ticket_draft_id');
 
     if (!device || !step2Data || !step3Data) {
       wx.showToast({
@@ -70,11 +71,27 @@ Page({
       attachments,
     });
 
-    // 先创建工单草稿，获取 ticketId
+    // 如果已有工单草稿，直接使用；否则创建新的
+    if (ticketId) {
+      try {
+        const ticket = await apiService.getTicket(ticketId);
+        if (ticket) {
+          this.setData({ ticket });
+          return;
+        }
+      } catch (error) {
+        console.error('获取工单失败:', error);
+        // 如果获取失败，继续创建新工单
+      }
+    }
+
+    // 如果没有工单草稿或获取失败，创建新的
     try {
       const request = this.buildCreateRequest();
       const ticket = await apiService.createTicket(request);
       this.setData({ ticket });
+      // 保存工单 ID
+      storageService.set('ticket_draft_id', ticket.id);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '创建工单失败';
       wx.showToast({

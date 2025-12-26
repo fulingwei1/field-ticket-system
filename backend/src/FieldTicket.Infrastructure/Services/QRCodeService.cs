@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.IO.Compression;
 using System.Text;
+using QRCoder;
 
 namespace FieldTicket.Infrastructure.Services;
 
@@ -28,22 +29,19 @@ public class QRCodeService : IQRCodeService
 
     public async Task<string> GenerateDeviceQRCodeAsync(Guid deviceId)
     {
-        // 获取设备信息
-        var device = await _dbContext.Tickets
-            .Where(t => t.DeviceId == deviceId)
-            .Select(t => new { t.DeviceId })
-            .FirstOrDefaultAsync();
+        // 验证设备是否存在（从工单表中检查）
+        var deviceExists = await _dbContext.Tickets
+            .AnyAsync(t => t.DeviceId == deviceId);
 
-        if (device == null)
+        if (!deviceExists)
         {
             throw new KeyNotFoundException($"设备 {deviceId} 不存在");
         }
 
         // 生成二维码内容（格式：device:{deviceId}）
-        var qrContent = $"device:{device.DeviceId}";
+        var qrContent = $"device:{deviceId}";
 
-        // 使用简单的文本二维码生成（实际项目中应使用 QrCodeNet 或 ZXing）
-        // 这里返回 Base64 编码的占位符，实际实现需要使用二维码库
+        // 使用 QRCoder 库生成二维码
         var qrCodeBase64 = GenerateQRCodeBase64(qrContent);
 
         return qrCodeBase64;
@@ -109,20 +107,23 @@ public class QRCodeService : IQRCodeService
     }
 
     /// <summary>
-    /// 生成二维码Base64（占位实现，实际应使用二维码库）
+    /// 生成二维码Base64
     /// </summary>
     private string GenerateQRCodeBase64(string content)
     {
-        // TODO: 使用 QrCodeNet 或 ZXing 库生成二维码
-        // 这里返回一个占位符，实际实现需要：
-        // 1. 安装 QrCodeNet 或 ZXing.Net 包
-        // 2. 生成二维码图片
-        // 3. 转换为 Base64
-
-        // 占位实现：返回一个简单的文本表示
-        var placeholder = $"QR_CODE_PLACEHOLDER:{content}";
-        var bytes = Encoding.UTF8.GetBytes(placeholder);
-        return Convert.ToBase64String(bytes);
+        try
+        {
+            using var qrGenerator = new QRCodeGenerator();
+            var qrCodeData = qrGenerator.CreateQrCode(content, QRCodeGenerator.ECCLevel.Q);
+            using var qrCode = new PngByteQRCode(qrCodeData);
+            var qrCodeBytes = qrCode.GetGraphic(20);
+            return Convert.ToBase64String(qrCodeBytes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "生成二维码失败: {Content}", content);
+            throw new InvalidOperationException($"生成二维码失败: {ex.Message}", ex);
+        }
     }
 }
 

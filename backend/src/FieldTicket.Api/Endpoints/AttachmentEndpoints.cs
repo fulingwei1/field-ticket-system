@@ -106,8 +106,8 @@ public static class AttachmentEndpoints
 
     private static async Task<IResult> GetDownloadUrl(
         Guid attachmentId,
-        [FromQuery] int expirySeconds = 900,
-        IAttachmentService attachmentService = null!)
+        IAttachmentService attachmentService = null!,
+        [FromQuery] int expirySeconds = 900)
     {
         try
         {

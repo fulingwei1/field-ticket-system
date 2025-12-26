@@ -100,10 +100,10 @@ public static class EngineerLoadStatEndpoints
     /// </summary>
     private static async Task<IResult> GetLoadTrend(
         [FromQuery] Guid? engineerId,
-        [FromQuery] string periodType = "daily",
-        [FromQuery] int periods = 30,
         HttpContext context,
-        IEngineerLoadStatService service)
+        IEngineerLoadStatService service,
+        [FromQuery] string periodType = "daily",
+        [FromQuery] int periods = 30)
     {
         try
         {
@@ -173,6 +173,7 @@ public static class EngineerLoadStatEndpoints
         return userId;
     }
 }
+
 
 
 

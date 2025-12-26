@@ -121,9 +121,9 @@ public static class KnowledgeValidityEndpoints
     /// </summary>
     private static async Task<IResult> GetExpiredKnowledge(
         [FromQuery] string? knowledgeType,
+        IKnowledgeValidityService service,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
-        IKnowledgeValidityService service)
+        [FromQuery] int pageSize = 20)
     {
         try
         {
@@ -184,6 +184,7 @@ public static class KnowledgeValidityEndpoints
         }
     }
 }
+
 
 
 

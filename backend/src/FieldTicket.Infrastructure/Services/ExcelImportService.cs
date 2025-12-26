@@ -205,6 +205,90 @@ public class ExcelImportService : IExcelImportService
                         });
                     }
                 }
+
+                // 验证问题分类
+                var validCategories = new[] { "设计", "工艺", "管理", "其他" };
+                if (!string.IsNullOrEmpty(problem.ProblemCategory) && !validCategories.Contains(problem.ProblemCategory))
+                {
+                    validationResult.IsValid = false;
+                    validationResult.Errors.Add(new ValidationError
+                    {
+                        Field = "ProblemCategory",
+                        Code = "Format",
+                        Message = $"第{problem.ExcelRowNumber}行：问题分类必须是：{string.Join("、", validCategories)}"
+                    });
+                }
+
+                // 验证优先级
+                if (!string.IsNullOrEmpty(problem.Priority))
+                {
+                    var validPriorities = new[] { "P1", "P2", "P3" };
+                    if (!validPriorities.Contains(problem.Priority))
+                    {
+                        validationResult.IsValid = false;
+                        validationResult.Errors.Add(new ValidationError
+                        {
+                            Field = "Priority",
+                            Code = "Format",
+                            Message = $"第{problem.ExcelRowNumber}行：优先级必须是：{string.Join("、", validPriorities)}"
+                        });
+                    }
+                }
+
+                // 验证处理状态
+                if (!string.IsNullOrEmpty(problem.Status))
+                {
+                    var validStatuses = new[] { "待分配", "处理中", "待验证", "验证中", "已验证", "验证失败", "已关闭" };
+                    if (!validStatuses.Contains(problem.Status))
+                    {
+                        validationResult.IsValid = false;
+                        validationResult.Errors.Add(new ValidationError
+                        {
+                            Field = "Status",
+                            Code = "Format",
+                            Message = $"第{problem.ExcelRowNumber}行：处理状态必须是：{string.Join("、", validStatuses)}"
+                        });
+                    }
+                }
+
+                // 验证验证状态
+                if (!string.IsNullOrEmpty(problem.VerificationStatus))
+                {
+                    var validVerificationStatuses = new[] { "未验证", "验证通过", "验证失败" };
+                    if (!validVerificationStatuses.Contains(problem.VerificationStatus))
+                    {
+                        validationResult.IsValid = false;
+                        validationResult.Errors.Add(new ValidationError
+                        {
+                            Field = "VerificationStatus",
+                            Code = "Format",
+                            Message = $"第{problem.ExcelRowNumber}行：验证状态必须是：{string.Join("、", validVerificationStatuses)}"
+                        });
+                    }
+                }
+
+                // 验证日期不能是未来日期
+                if (problem.FoundDate != default && problem.FoundDate > DateTime.Now)
+                {
+                    validationResult.IsValid = false;
+                    validationResult.Errors.Add(new ValidationError
+                    {
+                        Field = "FoundDate",
+                        Code = "Business",
+                        Message = $"第{problem.ExcelRowNumber}行：发现日期不能是未来日期"
+                    });
+                }
+
+                if (problem.CompletedDate.HasValue && problem.CompletedDate.Value > DateTime.Now)
+                {
+                    validationResult.IsValid = false;
+                    validationResult.Errors.Add(new ValidationError
+                    {
+                        Field = "CompletedDate",
+                        Code = "Business",
+                        Message = $"第{problem.ExcelRowNumber}行：完成日期不能是未来日期"
+                    });
+                }
             }
         }
 
@@ -578,8 +662,179 @@ public class ExcelImportService : IExcelImportService
         return Guid.Empty;
     }
 
+    public async Task<byte[]> GenerateTemplateAsync()
+    {
+        using var package = new ExcelPackage();
+        var worksheet = package.Workbook.Worksheets.Add("现场问题导入模板");
+
+        // 设置表头
+        var headers = new[]
+        {
+            "项目号", "项目名称", "客户名称", "设备类型", "行业类型", "销售金额", "数量",
+            "下单日期", "要求交货日期", "实际交货日期", "项目状态", "项目经理",
+            "问题序号", "问题分类", "问题描述", "优先级", "发现日期", "完成日期",
+            "主负责部门", "主负责人", "协作部门", "协作人员", "处理状态",
+            "处理方案", "处理方案详情", "验证状态", "客户反馈", "满意度评分",
+            "验证时间", "验证人", "关联工单号", "知识库ID", "是否重复问题", "备注"
+        };
+
+        // 写入表头
+        for (int col = 1; col <= headers.Length; col++)
+        {
+            worksheet.Cells[1, col].Value = headers[col - 1];
+            worksheet.Cells[1, col].Style.Font.Bold = true;
+            worksheet.Cells[1, col].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            worksheet.Cells[1, col].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+        }
+
+        // 设置列宽
+        worksheet.Column(1).Width = 15;  // 项目号
+        worksheet.Column(2).Width = 25;  // 项目名称
+        worksheet.Column(3).Width = 20;  // 客户名称
+        worksheet.Column(4).Width = 15;  // 设备类型
+        worksheet.Column(5).Width = 15;  // 行业类型
+        worksheet.Column(6).Width = 15;  // 销售金额
+        worksheet.Column(7).Width = 10;  // 数量
+        worksheet.Column(8).Width = 15;  // 下单日期
+        worksheet.Column(9).Width = 15;  // 要求交货日期
+        worksheet.Column(10).Width = 15; // 实际交货日期
+        worksheet.Column(11).Width = 15; // 项目状态
+        worksheet.Column(12).Width = 15; // 项目经理
+        worksheet.Column(13).Width = 12; // 问题序号
+        worksheet.Column(14).Width = 15; // 问题分类
+        worksheet.Column(15).Width = 30; // 问题描述
+        worksheet.Column(16).Width = 10; // 优先级
+        worksheet.Column(17).Width = 15; // 发现日期
+        worksheet.Column(18).Width = 15; // 完成日期
+        worksheet.Column(19).Width = 15; // 主负责部门
+        worksheet.Column(20).Width = 15; // 主负责人
+        worksheet.Column(21).Width = 15; // 协作部门
+        worksheet.Column(22).Width = 15; // 协作人员
+        worksheet.Column(23).Width = 15; // 处理状态
+        worksheet.Column(24).Width = 20; // 处理方案
+        worksheet.Column(25).Width = 30; // 处理方案详情
+        worksheet.Column(26).Width = 15; // 验证状态
+        worksheet.Column(27).Width = 30; // 客户反馈
+        worksheet.Column(28).Width = 12; // 满意度评分
+        worksheet.Column(29).Width = 15; // 验证时间
+        worksheet.Column(30).Width = 15; // 验证人
+        worksheet.Column(31).Width = 15; // 关联工单号
+        worksheet.Column(32).Width = 15; // 知识库ID
+        worksheet.Column(33).Width = 12; // 是否重复问题
+        worksheet.Column(34).Width = 30; // 备注
+
+        // 添加示例数据行（第2行）
+        var exampleRow = new object[]
+        {
+            "PJ-2025-001", "示例项目", "示例客户", "线体", "汽车", 1000000, 1,
+            DateTime.Now.AddMonths(-3).ToString("yyyy-MM-dd"),
+            DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd"),
+            DateTime.Now.ToString("yyyy-MM-dd"), "进行中", "张三",
+            1, "设计", "示例问题描述", "P1",
+            DateTime.Now.AddDays(-10).ToString("yyyy-MM-dd"),
+            DateTime.Now.ToString("yyyy-MM-dd"),
+            "研发部", "李四", "生产部", "王五", "已关闭",
+            "修复方案", "详细修复步骤", "验证通过", "客户满意", 5,
+            DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), "赵六", "T-2025-001", "KB-001", false, "备注信息"
+        };
+
+        for (int col = 1; col <= exampleRow.Length; col++)
+        {
+            worksheet.Cells[2, col].Value = exampleRow[col - 1];
+            worksheet.Cells[2, col].Style.Font.Color.SetColor(System.Drawing.Color.Gray);
+            worksheet.Cells[2, col].Style.Font.Italic = true;
+        }
+
+        // 添加数据验证（下拉列表）
+        // 问题分类下拉
+        var categoryRange = worksheet.Cells[3, 14, 1000, 14];
+        categoryRange.DataValidation.AddListDataValidation();
+        categoryRange.DataValidation.Formula.Values.Add("设计");
+        categoryRange.DataValidation.Formula.Values.Add("工艺");
+        categoryRange.DataValidation.Formula.Values.Add("管理");
+        categoryRange.DataValidation.Formula.Values.Add("其他");
+
+        // 优先级下拉
+        var priorityRange = worksheet.Cells[3, 16, 1000, 16];
+        priorityRange.DataValidation.AddListDataValidation();
+        priorityRange.DataValidation.Formula.Values.Add("P1");
+        priorityRange.DataValidation.Formula.Values.Add("P2");
+        priorityRange.DataValidation.Formula.Values.Add("P3");
+
+        // 处理状态下拉
+        var statusRange = worksheet.Cells[3, 23, 1000, 23];
+        statusRange.DataValidation.AddListDataValidation();
+        statusRange.DataValidation.Formula.Values.Add("待分配");
+        statusRange.DataValidation.Formula.Values.Add("处理中");
+        statusRange.DataValidation.Formula.Values.Add("待验证");
+        statusRange.DataValidation.Formula.Values.Add("验证中");
+        statusRange.DataValidation.Formula.Values.Add("已验证");
+        statusRange.DataValidation.Formula.Values.Add("验证失败");
+        statusRange.DataValidation.Formula.Values.Add("已关闭");
+
+        // 验证状态下拉
+        var verificationRange = worksheet.Cells[3, 26, 1000, 26];
+        verificationRange.DataValidation.AddListDataValidation();
+        verificationRange.DataValidation.Formula.Values.Add("未验证");
+        verificationRange.DataValidation.Formula.Values.Add("验证通过");
+        verificationRange.DataValidation.Formula.Values.Add("验证失败");
+
+        // 满意度评分范围（1-5）
+        var satisfactionRange = worksheet.Cells[3, 28, 1000, 28];
+        satisfactionRange.DataValidation.AddIntegerDataValidation();
+        satisfactionRange.DataValidation.Formula.Value = 1;
+        satisfactionRange.DataValidation.Formula.Value2 = 5;
+        satisfactionRange.DataValidation.ErrorStyle = OfficeOpenXml.DataValidation.ExcelDataValidationWarningStyle.stop;
+        satisfactionRange.DataValidation.ErrorTitle = "输入错误";
+        satisfactionRange.DataValidation.Error = "满意度评分必须在1-5之间";
+
+        // 冻结首行
+        worksheet.View.FreezePanes(2, 1);
+
+        // 添加说明Sheet
+        var instructionSheet = package.Workbook.Worksheets.Add("使用说明");
+        instructionSheet.Cells[1, 1].Value = "Excel导入模板使用说明";
+        instructionSheet.Cells[1, 1].Style.Font.Bold = true;
+        instructionSheet.Cells[1, 1].Style.Font.Size = 16;
+
+        var instructions = new[]
+        {
+            "",
+            "1. 填写说明：",
+            "   - 项目信息：每个项目填写一次，同一项目的多个问题可以填写多行",
+            "   - 问题信息：每个问题填写一行，问题序号从1开始递增",
+            "   - 日期格式：支持 yyyy-MM-dd 或 yyyy.M.d 格式",
+            "   - 必填字段：项目号、项目名称、问题分类、问题描述、发现日期、主负责部门、主负责人",
+            "",
+            "2. 字段说明：",
+            "   - 项目号：唯一标识，不能重复",
+            "   - 问题序号：同一项目内的问题序号，从1开始",
+            "   - 问题分类：设计/工艺/管理/其他",
+            "   - 优先级：P1（高）/P2（中）/P3（低）",
+            "   - 处理状态：待分配/处理中/待验证/验证中/已验证/验证失败/已关闭",
+            "   - 验证状态：未验证/验证通过/验证失败",
+            "   - 满意度评分：1-5分，5分为最满意",
+            "",
+            "3. 注意事项：",
+            "   - 删除示例行后再填写数据",
+            "   - 日期格式要正确，否则无法导入",
+            "   - 完成日期不能早于发现日期",
+            "   - 满意度评分必须在1-5之间",
+        };
+
+        for (int i = 0; i < instructions.Length; i++)
+        {
+            instructionSheet.Cells[i + 2, 1].Value = instructions[i];
+        }
+
+        instructionSheet.Column(1).Width = 80;
+
+        return await Task.FromResult(package.GetAsByteArray());
+    }
+
     #endregion
 }
+
 
 
 

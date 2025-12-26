@@ -89,6 +89,25 @@ public static class ExcelImportEndpoints
         })
         .WithName("ExecuteImport")
         .WithSummary("执行导入");
+
+        // 下载Excel模板
+        group.MapGet("template", async (IExcelImportService excelImportService) =>
+        {
+            try
+            {
+                var templateBytes = await excelImportService.GenerateTemplateAsync();
+                return Results.File(
+                    templateBytes,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "现场问题导入模板.xlsx");
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: 500);
+            }
+        })
+        .WithName("DownloadTemplate")
+        .WithSummary("下载Excel模板");
     }
 
     private static Guid? GetUserId(HttpContext context)
@@ -109,6 +128,7 @@ public class ExcelImportRequest
 {
     public ExcelImportResult ImportResult { get; set; } = null!;
 }
+
 
 
 

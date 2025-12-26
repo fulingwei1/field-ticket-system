@@ -37,8 +37,13 @@ public class SmartThresholdService : ISmartThresholdService
         // 根据场景类型过滤
         if (request.ScenarioType == "device_type" && !string.IsNullOrEmpty(request.ScenarioValue))
         {
-            // TODO: 需要关联设备表获取设备类型
-            // tickets = tickets.Where(t => t.Device.DeviceType == request.ScenarioValue).ToList();
+            // 通过 Project 获取设备类型
+            var projectIds = await _dbContext.Projects
+                .Where(p => p.DeviceType == request.ScenarioValue)
+                .Select(p => p.ProjectId)
+                .ToListAsync();
+            
+            tickets = tickets.Where(t => projectIds.Contains(t.ProjectId)).ToList();
         }
         else if (request.ScenarioType == "problem_type" && !string.IsNullOrEmpty(request.ScenarioValue))
         {

@@ -35,8 +35,8 @@ public static class KPIAnomalyEndpoints
     /// </summary>
     private static async Task<IResult> DetectEngineerAnomalies(
         Guid engineerId,
-        [FromQuery] int days = 30,
-        IKPIAnomalyService service = null!)
+        IKPIAnomalyService service = null!,
+        [FromQuery] int days = 30)
     {
         try
         {
@@ -54,8 +54,8 @@ public static class KPIAnomalyEndpoints
     /// </summary>
     private static async Task<IResult> DetectTeamAnomalies(
         [FromQuery] Guid? teamId,
-        [FromQuery] int days = 30,
-        IKPIAnomalyService service = null!)
+        IKPIAnomalyService service = null!,
+        [FromQuery] int days = 30)
     {
         try
         {
@@ -74,8 +74,8 @@ public static class KPIAnomalyEndpoints
     private static async Task<IResult> GenerateAnomalyReport(
         [FromQuery] Guid? engineerId,
         [FromQuery] Guid? teamId,
-        [FromQuery] int days = 30,
-        IKPIAnomalyService service = null!)
+        IKPIAnomalyService service = null!,
+        [FromQuery] int days = 30)
     {
         try
         {
@@ -88,6 +88,7 @@ public static class KPIAnomalyEndpoints
         }
     }
 }
+
 
 
 

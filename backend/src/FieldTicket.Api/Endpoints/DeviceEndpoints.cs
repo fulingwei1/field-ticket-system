@@ -34,9 +34,9 @@ public static class DeviceEndpoints
     /// 获取设备列表
     /// </summary>
     private static async Task<IResult> GetDevices(
+        IDeviceService service = null!,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
-        IDeviceService service = null!)
+        [FromQuery] int pageSize = 50)
     {
         try
         {
@@ -76,9 +76,9 @@ public static class DeviceEndpoints
     /// </summary>
     private static async Task<IResult> SearchDevices(
         [FromQuery] string keyword,
+        IDeviceService service = null!,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
-        IDeviceService service = null!)
+        [FromQuery] int pageSize = 50)
     {
         try
         {
@@ -91,6 +91,7 @@ public static class DeviceEndpoints
         }
     }
 }
+
 
 
 

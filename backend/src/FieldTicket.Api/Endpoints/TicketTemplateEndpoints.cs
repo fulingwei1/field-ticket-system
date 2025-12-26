@@ -216,9 +216,9 @@ public static class TicketTemplateEndpoints
     /// </summary>
     private static async Task<IResult> GetTemplates(
         [FromQuery] string? category,
-        [FromQuery] bool includePublic = true,
         ITicketTemplateService service = null!,
-        HttpContext httpContext = null!)
+        HttpContext httpContext = null!,
+        [FromQuery] bool includePublic = true)
     {
         try
         {
@@ -298,6 +298,7 @@ public class ApplyTemplateRequest
 {
     public Guid? DeviceId { get; set; }
 }
+
 
 
 

@@ -117,9 +117,9 @@ public static class CorrectiveActionEndpoints
         [FromQuery] DateTime? createdFrom,
         [FromQuery] DateTime? createdTo,
         [FromQuery] Guid? relatedTicketId,
+        ICorrectiveActionService service,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
-        ICorrectiveActionService service)
+        [FromQuery] int pageSize = 20)
     {
         try
         {
@@ -270,6 +270,7 @@ public class UpdateActionStatusRequest
     public string Status { get; set; } = string.Empty;
     public string? Notes { get; set; }
 }
+
 
 
 

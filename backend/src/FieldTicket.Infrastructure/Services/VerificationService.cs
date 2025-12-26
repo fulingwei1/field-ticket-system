@@ -41,9 +41,10 @@ public class VerificationService : IVerificationService
         }
 
         // 如果指定了解决方案ID，验证解决方案存在
+        Solution? solution = null;
         if (request.SolutionId.HasValue)
         {
-            var solution = await _dbContext.Solutions
+            solution = await _dbContext.Solutions
                 .FirstOrDefaultAsync(s => s.SolutionId == request.SolutionId.Value);
 
             if (solution == null)
@@ -56,6 +57,14 @@ public class VerificationService : IVerificationService
                 throw new InvalidOperationException("解决方案不属于该工单");
             }
         }
+        else
+        {
+            // 如果没有指定解决方案ID，尝试从工单获取最新的解决方案
+            solution = await _dbContext.Solutions
+                .Where(s => s.TicketId == ticketId && s.Status == "Published")
+                .OrderByDescending(s => s.PublishedAt ?? s.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
 
         // 验证数据一致性
         if (request.RunCount != request.PassCount + request.FailCount)
@@ -63,8 +72,14 @@ public class VerificationService : IVerificationService
             throw new ArgumentException("验证次数必须等于通过次数加失败次数");
         }
 
+        // 检查验证清单必填项
+        if (solution != null)
+        {
+            ValidateChecklistRequiredItems(solution.VerificationChecklistJson, request.ChecklistResultJson);
+        }
+
         // 计算验证结果
-        var result = CalculateVerificationResult(request);
+        var result = CalculateVerificationResult(request, solution);
 
         // 创建验证记录
         var verification = new Verification
@@ -131,17 +146,111 @@ public class VerificationService : IVerificationService
     }
 
     /// <summary>
+    /// 验证验证清单必填项
+    /// </summary>
+    private void ValidateChecklistRequiredItems(JsonDocument checklistTemplate, JsonDocument checklistResult)
+    {
+        var templateRoot = checklistTemplate.RootElement;
+        var resultRoot = checklistResult.RootElement;
+
+        // 如果验证清单模板为空，跳过检查
+        if (templateRoot.ValueKind != JsonValueKind.Object && templateRoot.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        var missingRequiredItems = new List<string>();
+
+        // 验证清单模板可能是数组格式或对象格式
+        if (templateRoot.ValueKind == JsonValueKind.Array)
+        {
+            // 数组格式：每个项是一个检查项
+            foreach (var item in templateRoot.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.Object)
+                {
+                    var field = item.TryGetProperty("field", out var fieldProp) 
+                        ? fieldProp.GetString() 
+                        : null;
+                    var required = item.TryGetProperty("required", out var requiredProp) 
+                        && requiredProp.GetBoolean();
+                    var question = item.TryGetProperty("question", out var questionProp) 
+                        ? questionProp.GetString() 
+                        : null;
+
+                    if (required && !string.IsNullOrEmpty(field))
+                    {
+                        // 检查结果中是否包含该字段
+                        if (!resultRoot.TryGetProperty(field, out var resultValue))
+                        {
+                            missingRequiredItems.Add(question ?? field);
+                        }
+                        else
+                        {
+                            // 检查值是否为空
+                            if (resultValue.ValueKind == JsonValueKind.Null ||
+                                (resultValue.ValueKind == JsonValueKind.String && string.IsNullOrWhiteSpace(resultValue.GetString())) ||
+                                (resultValue.ValueKind == JsonValueKind.Array && resultValue.GetArrayLength() == 0))
+                            {
+                                missingRequiredItems.Add(question ?? field);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else if (templateRoot.ValueKind == JsonValueKind.Object)
+        {
+            // 对象格式：遍历所有属性
+            foreach (var prop in templateRoot.EnumerateObject())
+            {
+                var fieldName = prop.Name;
+                var fieldValue = prop.Value;
+
+                // 检查是否是必填项
+                if (fieldValue.ValueKind == JsonValueKind.Object)
+                {
+                    var required = fieldValue.TryGetProperty("required", out var requiredProp) 
+                        && requiredProp.GetBoolean();
+                    var question = fieldValue.TryGetProperty("question", out var questionProp) 
+                        ? questionProp.GetString() 
+                        : null;
+
+                    if (required)
+                    {
+                        // 检查结果中是否包含该字段
+                        if (!resultRoot.TryGetProperty(fieldName, out var resultValue))
+                        {
+                            missingRequiredItems.Add(question ?? fieldName);
+                        }
+                        else
+                        {
+                            // 检查值是否为空
+                            if (resultValue.ValueKind == JsonValueKind.Null ||
+                                (resultValue.ValueKind == JsonValueKind.String && string.IsNullOrWhiteSpace(resultValue.GetString())) ||
+                                (resultValue.ValueKind == JsonValueKind.Array && resultValue.GetArrayLength() == 0))
+                            {
+                                missingRequiredItems.Add(question ?? fieldName);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 如果有缺失的必填项，抛出异常
+        if (missingRequiredItems.Any())
+        {
+            var missingItemsStr = string.Join("、", missingRequiredItems);
+            throw new ArgumentException($"验证清单必填项未完成：{missingItemsStr}。请完成所有必填项后再提交验证结果。");
+        }
+    }
+
+    /// <summary>
     /// 计算验证结果
     /// </summary>
-    private string CalculateVerificationResult(SubmitVerificationRequest request)
+    private string CalculateVerificationResult(SubmitVerificationRequest request, Solution? solution)
     {
-        // 检查验证清单结果
-        var checklistResult = request.ChecklistResultJson;
-        var checklistRoot = checklistResult.RootElement;
-
-        // 获取解决方案的验证清单（如果有）
-        // TODO: 从解决方案获取验证清单，检查必填项
-
         // 计算通过率
         var passRate = request.RunCount > 0 
             ? (double)request.PassCount / request.RunCount 
@@ -155,8 +264,7 @@ public class VerificationService : IVerificationService
 
         if (passRate == 1.0)
         {
-            // 检查所有必填项是否完成
-            // TODO: 从解决方案验证清单检查必填项
+            // 如果通过率是 100%，且验证清单必填项已检查（在 ValidateChecklistRequiredItems 中已检查），返回 PASS
             return "PASS";
         }
         else if (passRate > 0.0)

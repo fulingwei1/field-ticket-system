@@ -133,9 +133,9 @@ public static class KnowledgeSourceTraceEndpoints
     private static async Task<IResult> GetVerificationHistory(
         Guid knowledgeId,
         [FromQuery] string knowledgeType,
+        IKnowledgeSourceTraceService service,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
-        IKnowledgeSourceTraceService service)
+        [FromQuery] int pageSize = 20)
     {
         try
         {
@@ -179,6 +179,7 @@ public class RecordVerificationRequest
 {
     public string? VerificationNote { get; set; }
 }
+
 
 
 

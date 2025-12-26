@@ -1,0 +1,89 @@
+<!--工单列表页面-->
+<view class="container">
+  <!-- 筛选栏 -->
+  <view class="filter-bar">
+    <picker
+      mode="selector"
+      range="{{statusOptions}}"
+      range-key="label"
+      value="{{statusIndex}}"
+      bindchange="onStatusFilterChange"
+    >
+      <view class="filter-item">
+        <text class="filter-label">状态：</text>
+        <text class="filter-value">{{statusOptions[statusIndex].label}}</text>
+        <text class="filter-arrow">▼</text>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 工单列表 -->
+  <scroll-view
+    class="ticket-list"
+    scroll-y
+    refresher-enabled
+    refresher-triggered="{{refreshing}}"
+    bindrefresherrefresh="refreshTickets"
+    bindscrolltolower="onLoadMore"
+  >
+    <!-- 加载中 -->
+    <view wx:if="{{loading && tickets.length === 0}}" class="loading-container">
+      <text>加载中...</text>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:elif="{{tickets.length === 0}}" class="empty-container">
+      <text class="empty-text">暂无工单</text>
+      <button class="btn btn-primary" bindtap="onCreateTicket">创建工单</button>
+    </view>
+
+    <!-- 工单列表 -->
+    <view wx:else class="ticket-items">
+      <view
+        wx:for="{{tickets}}"
+        wx:key="id"
+        class="ticket-item"
+        data-id="{{item.id}}"
+        bindtap="onTicketTap"
+      >
+        <view class="ticket-header">
+          <text class="ticket-no">{{item.ticket_no}}</text>
+          <text class="ticket-status" style="color: {{item.statusColor}}">
+            {{item.statusText}}
+          </text>
+        </view>
+        
+        <view class="ticket-info">
+          <text class="info-label">问题域：</text>
+          <text class="info-value">{{item.domain}}</text>
+        </view>
+        
+        <view class="ticket-info" wx:if="{{item.device_name}}">
+          <text class="info-label">设备：</text>
+          <text class="info-value">{{item.device_name}}</text>
+        </view>
+        
+        <view class="ticket-info">
+          <text class="info-label">创建时间：</text>
+          <text class="info-value">{{item.created_at}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 加载更多 -->
+    <view wx:if="{{loading && tickets.length > 0}}" class="loading-more">
+      <text>加载中...</text>
+    </view>
+
+    <!-- 没有更多 -->
+    <view wx:if="{{!hasMore && tickets.length > 0}}" class="no-more">
+      <text>没有更多了</text>
+    </view>
+  </scroll-view>
+
+  <!-- 创建工单按钮 -->
+  <view class="fab" bindtap="onCreateTicket">
+    <text class="fab-icon">+</text>
+  </view>
+</view>
+

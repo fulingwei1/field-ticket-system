@@ -70,9 +70,9 @@ public static class KnowledgeGraphEndpoints
     /// </summary>
     private static async Task<IResult> SearchKnowledge(
         [FromQuery] string query,
+        IKnowledgeGraphService service,
         [FromQuery] int topK = 10,
-        [FromQuery] string? nodeType = null,
-        IKnowledgeGraphService service)
+        [FromQuery] string? nodeType = null)
     {
         try
         {

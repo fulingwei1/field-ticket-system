@@ -306,18 +306,80 @@ public class NotificationRuleService : INotificationRuleService
             }
         }
 
-        // 按角色筛选（TODO: 需要实现企业微信通讯录服务）
-        if (root.TryGetProperty("roles", out var rolesElement))
+        // 按角色筛选
+        if (root.TryGetProperty("roles", out var rolesElement) && _contactService != null)
         {
-            // 暂时跳过角色解析，后续实现
-            _logger.LogWarning("角色解析功能待实现");
+            try
+            {
+                foreach (var roleElement in rolesElement.EnumerateArray())
+                {
+                    var role = roleElement.GetString();
+                    if (!string.IsNullOrEmpty(role))
+                    {
+                        var usersByRole = await _contactService.GetUsersByRoleAsync(role);
+                        foreach (var user in usersByRole.Where(u => u.IsActive))
+                        {
+                            // 将企业微信用户ID转换为系统用户ID
+                            var systemUserId = await GetSystemUserIdByWeComUserIdAsync(user.UserId);
+                            if (systemUserId.HasValue)
+                            {
+                                recipients.Add(systemUserId.Value.ToString());
+                            }
+                            else
+                            {
+                                // 如果系统用户不存在，直接使用企业微信用户ID
+                                recipients.Add(user.UserId);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "按角色筛选用户失败");
+            }
+        }
+        else if (root.TryGetProperty("roles", out _) && _contactService == null)
+        {
+            _logger.LogWarning("角色解析功能需要 IWeComContactService，但服务未注入");
         }
 
-        // 按部门筛选（TODO: 需要实现企业微信通讯录服务）
-        if (root.TryGetProperty("departments", out var departmentsElement))
+        // 按部门筛选
+        if (root.TryGetProperty("departments", out var departmentsElement) && _contactService != null)
         {
-            // 暂时跳过部门解析，后续实现
-            _logger.LogWarning("部门解析功能待实现");
+            try
+            {
+                foreach (var deptElement in departmentsElement.EnumerateArray())
+                {
+                    var departmentName = deptElement.GetString();
+                    if (!string.IsNullOrEmpty(departmentName))
+                    {
+                        var usersByDept = await _contactService.GetUsersByDepartmentNameAsync(departmentName);
+                        foreach (var user in usersByDept.Where(u => u.IsActive))
+                        {
+                            // 将企业微信用户ID转换为系统用户ID
+                            var systemUserId = await GetSystemUserIdByWeComUserIdAsync(user.UserId);
+                            if (systemUserId.HasValue)
+                            {
+                                recipients.Add(systemUserId.Value.ToString());
+                            }
+                            else
+                            {
+                                // 如果系统用户不存在，直接使用企业微信用户ID
+                                recipients.Add(user.UserId);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "按部门筛选用户失败");
+            }
+        }
+        else if (root.TryGetProperty("departments", out _) && _contactService == null)
+        {
+            _logger.LogWarning("部门解析功能需要 IWeComContactService，但服务未注入");
         }
 
         return recipients.Where(r => !string.IsNullOrEmpty(r)).ToList();
@@ -446,6 +508,30 @@ public class NotificationRuleService : INotificationRuleService
             CreatedAt = rule.CreatedAt,
             UpdatedAt = rule.UpdatedAt
         };
+    }
+
+    /// <summary>
+    /// 根据企业微信用户ID获取系统用户ID
+    /// </summary>
+    private async Task<Guid?> GetSystemUserIdByWeComUserIdAsync(string weComUserId)
+    {
+        if (string.IsNullOrEmpty(weComUserId))
+        {
+            return null;
+        }
+
+        try
+        {
+            var user = await _dbContext.Users
+                .FirstOrDefaultAsync(u => u.WeComUserId == weComUserId && u.IsActive);
+
+            return user?.Id;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "根据企业微信用户ID获取系统用户ID失败，WeComUserId：{WeComUserId}", weComUserId);
+            return null;
+        }
     }
 }
 

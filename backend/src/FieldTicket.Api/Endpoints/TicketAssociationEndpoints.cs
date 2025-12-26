@@ -67,8 +67,8 @@ public static class TicketAssociationEndpoints
     /// </summary>
     private static async Task<IResult> GetSimilarTickets(
         Guid ticketId,
-        [FromQuery] int maxResults = 10,
-        ITicketAssociationService service = null!)
+        ITicketAssociationService service = null!,
+        [FromQuery] int maxResults = 10)
     {
         try
         {
@@ -86,8 +86,8 @@ public static class TicketAssociationEndpoints
     /// </summary>
     private static async Task<IResult> GetDeviceRelatedTickets(
         Guid ticketId,
-        [FromQuery] int maxResults = 10,
-        ITicketAssociationService service = null!)
+        ITicketAssociationService service = null!,
+        [FromQuery] int maxResults = 10)
     {
         try
         {
@@ -105,8 +105,8 @@ public static class TicketAssociationEndpoints
     /// </summary>
     private static async Task<IResult> GetCustomerRelatedTickets(
         Guid ticketId,
-        [FromQuery] int maxResults = 10,
-        ITicketAssociationService service = null!)
+        ITicketAssociationService service = null!,
+        [FromQuery] int maxResults = 10)
     {
         try
         {
@@ -124,8 +124,8 @@ public static class TicketAssociationEndpoints
     /// </summary>
     private static async Task<IResult> GetDomainRelatedTickets(
         Guid ticketId,
-        [FromQuery] int maxResults = 10,
-        ITicketAssociationService service = null!)
+        ITicketAssociationService service = null!,
+        [FromQuery] int maxResults = 10)
     {
         try
         {
@@ -138,6 +138,7 @@ public static class TicketAssociationEndpoints
         }
     }
 }
+
 
 
 

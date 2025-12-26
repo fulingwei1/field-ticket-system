@@ -28,6 +28,11 @@ import EngineerLoadStats from './pages/performance/EngineerLoadStats';
 import NewcomerGrowthCurve from './pages/performance/NewcomerGrowthCurve';
 import QRCodeGenerator from './pages/devices/QRCodeGenerator';
 import ExcelImport from './pages/projects/ExcelImport';
+import ProjectList from './pages/projects/ProjectList';
+import ProblemDetail from './pages/projects/ProblemDetail';
+import ProblemStatistics from './pages/projects/ProblemStatistics';
+import UserProfile from './pages/user-profile/UserProfile';
+import ThresholdManagement from './pages/thresholds/ThresholdManagement';
 import AppLayout from './components/AppLayout';
 
 /**
@@ -129,9 +134,20 @@ export default function AppRoutes() {
               {/* 项目导入 */}
               <Route path="/projects/excel-import" element={<ExcelImport />} />
               
+              {/* 项目管理 */}
+              <Route path="/projects" element={<ProjectList />} />
+              <Route path="/projects/problems/:problemId" element={<ProblemDetail />} />
+              <Route path="/projects/statistics" element={<ProblemStatistics />} />
+              
               {/* 整改任务 */}
               <Route path="/corrective-actions" element={<CorrectiveActionList />} />
               <Route path="/corrective-actions/:actionId" element={<CorrectiveActionDetail />} />
+              
+              {/* 用户画像 */}
+              <Route path="/user-profile" element={<UserProfile />} />
+              
+              {/* 智能阈值管理 */}
+              <Route path="/thresholds" element={<ThresholdManagement />} />
               
               {/* 默认重定向 */}
               <Route path="/" element={<TicketList />} />

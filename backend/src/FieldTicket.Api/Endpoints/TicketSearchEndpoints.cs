@@ -38,9 +38,9 @@ public static class TicketSearchEndpoints
         [FromQuery] string? deviceSn,
         [FromQuery] DateTime? dateFrom,
         [FromQuery] DateTime? dateTo,
+        ITicketSearchService service,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
-        ITicketSearchService service)
+        [FromQuery] int pageSize = 20)
     {
         try
         {
@@ -73,8 +73,8 @@ public static class TicketSearchEndpoints
     /// </summary>
     private static async Task<IResult> GetSearchSuggestions(
         [FromQuery] string q,
-        [FromQuery] int limit = 10,
-        ITicketSearchService service)
+        ITicketSearchService service,
+        [FromQuery] int limit = 10)
     {
         try
         {
@@ -92,6 +92,7 @@ public static class TicketSearchEndpoints
         }
     }
 }
+
 
 
 

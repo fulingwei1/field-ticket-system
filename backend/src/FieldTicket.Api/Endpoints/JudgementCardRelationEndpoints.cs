@@ -162,3 +162,5 @@ public static class JudgementCardRelationEndpoints
 
 
 
+
+

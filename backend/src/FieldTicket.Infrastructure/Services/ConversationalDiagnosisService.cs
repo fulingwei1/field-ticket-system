@@ -15,14 +15,17 @@ public class ConversationalDiagnosisService : IConversationalDiagnosisService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<ConversationalDiagnosisService> _logger;
+    private readonly ILLMService? _llmService;
     private const int MaxConversationRounds = 5;
 
     public ConversationalDiagnosisService(
         ApplicationDbContext dbContext,
-        ILogger<ConversationalDiagnosisService> logger)
+        ILogger<ConversationalDiagnosisService> logger,
+        ILLMService? llmService = null)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _llmService = llmService;
     }
 
     public async Task<DiagnosisConversationDto> StartConversationAsync(Guid ticketId)
@@ -73,37 +76,50 @@ public class ConversationalDiagnosisService : IConversationalDiagnosisService
     {
         _logger.LogInformation("Generating initial hypotheses for ticket {TicketId}", ticketId);
 
-        // TODO: 集成AI服务生成假设
-        // 这里先返回模拟数据，后续需要集成RAG服务和LLM服务
-        var hypotheses = new List<Shared.Models.HypothesisDto>
-        {
-            new Shared.Models.HypothesisDto
-            {
-                HypothesisId = "hypothesis_1",
-                Description = "可能是IO信号问题",
-                Confidence = 0.7m,
-                Evidence = new List<string> { "证据1", "证据2" },
-                SupportingKnowledgeIds = new List<string>()
-            },
-            new Shared.Models.HypothesisDto
-            {
-                HypothesisId = "hypothesis_2",
-                Description = "可能是传感器故障",
-                Confidence = 0.6m,
-                Evidence = new List<string> { "证据3" },
-                SupportingKnowledgeIds = new List<string>()
-            },
-            new Shared.Models.HypothesisDto
-            {
-                HypothesisId = "hypothesis_3",
-                Description = "可能是参数配置错误",
-                Confidence = 0.5m,
-                Evidence = new List<string> { "证据4" },
-                SupportingKnowledgeIds = new List<string>()
-            }
-        };
+        // 获取工单信息
+        var ticket = await _dbContext.Tickets
+            .FirstOrDefaultAsync(t => t.TicketId == ticketId);
 
-        return hypotheses;
+        if (ticket == null)
+        {
+            throw new KeyNotFoundException($"工单 {ticketId} 不存在");
+        }
+
+        // 尝试使用 LLM 生成假设
+        if (_llmService != null)
+        {
+            try
+            {
+                var isAvailable = await _llmService.IsAvailableAsync();
+                if (isAvailable)
+                {
+                    var prompt = BuildHypothesisPrompt(ticket);
+                    var response = await _llmService.GenerateStructuredAsync<HypothesisGenerationResponse>(
+                        prompt,
+                        options: new LLMRequestOptions
+                        {
+                            Temperature = 0.3, // 较低温度，更确定性
+                            MaxTokens = 1500
+                        });
+
+                    return response.Hypotheses.Select((h, index) => new Shared.Models.HypothesisDto
+                    {
+                        HypothesisId = $"hypothesis_{index + 1}",
+                        Description = h.Description,
+                        Confidence = ConvertConfidenceToDecimal(h.Confidence),
+                        Evidence = h.Evidence ?? new List<string>(),
+                        SupportingKnowledgeIds = h.SupportingKnowledgeIds ?? new List<string>()
+                    }).ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to generate hypotheses using LLM, falling back to rule-based");
+            }
+        }
+
+        // 降级方案：基于规则的假设生成
+        return GenerateRuleBasedHypotheses(ticket);
     }
 
     public async Task<List<VerificationStepDto>> GenerateVerificationStepsAsync(
@@ -127,37 +143,74 @@ public class ConversationalDiagnosisService : IConversationalDiagnosisService
             throw new InvalidOperationException($"对话 {conversationId} 状态不是 active");
         }
 
-        // TODO: 集成AI服务生成验证步骤
-        // 这里先返回模拟数据
-        var steps = new List<VerificationStepDto>
+        // 获取工单和假设信息
+        var ticket = await _dbContext.Tickets
+            .FirstOrDefaultAsync(t => t.TicketId == conversation.TicketId);
+
+        if (ticket == null)
         {
-            new VerificationStepDto
+            throw new KeyNotFoundException($"工单 {conversation.TicketId} 不存在");
+        }
+
+        // 获取假设描述（从对话历史或假设ID）
+        var hypothesisDescription = conversation.CurrentHypothesis ?? hypothesisId;
+
+        // 尝试使用 LLM 生成验证步骤
+        List<VerificationStepDto> steps;
+        if (_llmService != null)
+        {
+            try
             {
-                StepId = Guid.NewGuid(),
-                ConversationId = conversationId,
-                HypothesisId = hypothesisId,
-                StepDescription = "检查PLC中IO状态",
-                StepType = "check",
-                ExpectedResult = "IO状态正常",
-                VerificationStatus = "pending",
-                CreatedAt = DateTime.UtcNow
-            },
-            new VerificationStepDto
-            {
-                StepId = Guid.NewGuid(),
-                ConversationId = conversationId,
-                HypothesisId = hypothesisId,
-                StepDescription = "检查传感器信号",
-                StepType = "test",
-                ExpectedResult = "传感器信号正常",
-                VerificationStatus = "pending",
-                CreatedAt = DateTime.UtcNow
+                var isAvailable = await _llmService.IsAvailableAsync();
+                if (isAvailable)
+                {
+                    var prompt = BuildVerificationStepsPrompt(ticket, hypothesisDescription);
+                    var response = await _llmService.GenerateStructuredAsync<VerificationStepsGenerationResponse>(
+                        prompt,
+                        options: new LLMRequestOptions
+                        {
+                            Temperature = 0.4,
+                            MaxTokens = 2000
+                        });
+
+                    var stepGuids = response.Steps.Select(_ => Guid.NewGuid()).ToList();
+                    steps = response.Steps.Select((s, index) => new VerificationStepDto
+                    {
+                        StepId = stepGuids[index],
+                        ConversationId = conversationId,
+                        HypothesisId = hypothesisId,
+                        StepDescription = s.StepDescription,
+                        StepType = s.StepType ?? "check",
+                        ExpectedResult = s.ExpectedResult,
+                        VerificationStatus = "pending",
+                        CreatedAt = DateTime.UtcNow
+                    }).ToList();
+                }
+                else
+                {
+                    // LLM 不可用，使用降级方案
+                    steps = GenerateRuleBasedVerificationSteps(hypothesisDescription);
+                }
             }
-        };
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to generate verification steps using LLM, falling back to rule-based");
+                steps = GenerateRuleBasedVerificationSteps(hypothesisDescription);
+            }
+        }
+        else
+        {
+            // 没有 LLM 服务，使用降级方案
+            steps = GenerateRuleBasedVerificationSteps(hypothesisDescription);
+        }
 
         // 保存验证步骤到数据库
         foreach (var stepDto in steps)
         {
+            // 确保 ConversationId 和 HypothesisId 正确设置
+            stepDto.ConversationId = conversationId;
+            stepDto.HypothesisId = hypothesisId;
+
             var step = new HypothesisVerificationStep
             {
                 StepId = stepDto.StepId,
@@ -458,6 +511,246 @@ public class ConversationalDiagnosisService : IConversationalDiagnosisService
 
         conversation.DiagnosisPathJson = JsonDocument.Parse(JsonSerializer.Serialize(path));
     }
+
+    /// <summary>
+    /// 构建假设生成提示词
+    /// </summary>
+    private string BuildHypothesisPrompt(Ticket ticket)
+    {
+        var factsJson = ticket.FactsJson != null
+            ? ticket.FactsJson.RootElement.GetRawText()
+            : "{}";
+
+        return $@"基于以下工单信息，生成Top-3最可能的诊断假设：
+
+工单信息：
+- 问题域：{ticket.Domain}
+- 步骤：{ticket.StepCode} {ticket.StepName ?? ""}
+- 症状：{ticket.SymptomTitle}
+- 详细描述：{ticket.SymptomDetail ?? "无"}
+- 复现率：{ticket.ReproRate ?? 0}%
+- 重启恢复：{(ticket.RebootRecovers ?? false ? "是" : "否")}
+- 环境相关：{(ticket.EnvRelated ?? false ? "是" : "否")}
+- 软件版本：{ticket.SwVersion}
+- PLC版本：{ticket.PlcVersion}
+- 参数版本：{ticket.ParamVersion}
+- 事实表：{factsJson}
+
+请生成Top-3假设，每个假设必须：
+1. 有明确的描述（具体的问题原因）
+2. 有置信度评估（high=0.8-1.0, medium=0.5-0.7, low=0.0-0.4）
+3. 有证据支持（至少2条，基于工单信息）
+4. 引用相关知识ID（如果有）
+
+返回JSON格式：
+{{
+  ""hypotheses"": [
+    {{
+      ""rank"": 1,
+      ""description"": ""假设描述"",
+      ""confidence"": ""high|medium|low"",
+      ""evidence"": [""证据1"", ""证据2""],
+      ""supporting_knowledge_ids"": []
+    }}
+  ]
+}}";
+    }
+
+    /// <summary>
+    /// 构建验证步骤生成提示词
+    /// </summary>
+    private string BuildVerificationStepsPrompt(Ticket ticket, string hypothesisDescription)
+    {
+        var factsJson = ticket.FactsJson != null
+            ? ticket.FactsJson.RootElement.GetRawText()
+            : "{}";
+
+        return $@"基于以下工单信息和假设，生成验证步骤：
+
+工单信息：
+- 问题域：{ticket.Domain}
+- 步骤：{ticket.StepCode} {ticket.StepName ?? ""}
+- 症状：{ticket.SymptomTitle}
+- 详细描述：{ticket.SymptomDetail ?? "无"}
+- 事实表：{factsJson}
+
+假设：{hypothesisDescription}
+
+请生成3-5个验证步骤，每个步骤必须：
+1. 有明确的描述（具体要检查什么）
+2. 有步骤类型（check=检查, test=测试, measure=测量）
+3. 有预期结果（期望看到什么）
+4. 步骤应该按逻辑顺序排列
+
+返回JSON格式：
+{{
+  ""steps"": [
+    {{
+      ""step_description"": ""步骤描述"",
+      ""step_type"": ""check|test|measure"",
+      ""expected_result"": ""预期结果""
+    }}
+  ]
+}}";
+    }
+
+    /// <summary>
+    /// 基于规则的假设生成（降级方案）
+    /// </summary>
+    private List<Shared.Models.HypothesisDto> GenerateRuleBasedHypotheses(Ticket ticket)
+    {
+        var hypotheses = new List<Shared.Models.HypothesisDto>();
+
+        // 基于问题域生成通用假设
+        var domainHypotheses = ticket.Domain switch
+        {
+            'A' => new[] { 
+                ("机械部件故障", 0.7m, new[] { "问题域A", $"步骤{ticket.StepCode}" }),
+                ("动作执行异常", 0.6m, new[] { "问题域A", ticket.SymptomTitle }),
+                ("机械磨损", 0.5m, new[] { "问题域A", "长期运行" })
+            },
+            'B' => new[] { 
+                ("电气信号异常", 0.7m, new[] { "问题域B", $"步骤{ticket.StepCode}" }),
+                ("IO模块故障", 0.6m, new[] { "问题域B", ticket.SymptomTitle }),
+                ("传感器故障", 0.5m, new[] { "问题域B", "信号检测" })
+            },
+            'C' => new[] { 
+                ("PLC程序逻辑错误", 0.7m, new[] { "问题域C", $"步骤{ticket.StepCode}" }),
+                ("程序版本不匹配", 0.6m, new[] { "问题域C", $"软件版本{ticket.SwVersion}" }),
+                ("程序参数设置错误", 0.5m, new[] { "问题域C", $"参数版本{ticket.ParamVersion}" })
+            },
+            'D' => new[] { 
+                ("测试判定条件错误", 0.7m, new[] { "问题域D", $"步骤{ticket.StepCode}" }),
+                ("判定阈值设置不当", 0.6m, new[] { "问题域D", ticket.SymptomTitle }),
+                ("测试环境异常", 0.5m, new[] { "问题域D", "环境相关" })
+            },
+            'E' => new[] { 
+                ("系统环境异常", 0.7m, new[] { "问题域E", $"步骤{ticket.StepCode}" }),
+                ("网络连接问题", 0.6m, new[] { "问题域E", ticket.SymptomTitle }),
+                ("配置参数错误", 0.5m, new[] { "问题域E", "配置相关" })
+            },
+            _ => new[] { 
+                ("未知问题", 0.5m, new[] { "需要进一步排查" }),
+                ("建议升级处理", 0.3m, new[] { "问题复杂" })
+            }
+        };
+
+        for (int i = 0; i < Math.Min(3, domainHypotheses.Length); i++)
+        {
+            var (description, confidence, evidence) = domainHypotheses[i];
+            hypotheses.Add(new Shared.Models.HypothesisDto
+            {
+                HypothesisId = $"hypothesis_{i + 1}",
+                Description = description,
+                Confidence = confidence,
+                Evidence = evidence.ToList(),
+                SupportingKnowledgeIds = new List<string>()
+            });
+        }
+
+        return hypotheses;
+    }
+
+    /// <summary>
+    /// 基于规则的验证步骤生成（降级方案）
+    /// </summary>
+    private List<VerificationStepDto> GenerateRuleBasedVerificationSteps(string hypothesisDescription)
+    {
+        var steps = new List<VerificationStepDto>
+        {
+            new VerificationStepDto
+            {
+                StepId = Guid.NewGuid(),
+                ConversationId = Guid.Empty, // 将在保存时设置
+                HypothesisId = null, // 将在保存时设置
+                StepDescription = $"检查与假设相关的硬件状态：{hypothesisDescription}",
+                StepType = "check",
+                ExpectedResult = "硬件状态正常",
+                VerificationStatus = "pending",
+                CreatedAt = DateTime.UtcNow
+            },
+            new VerificationStepDto
+            {
+                StepId = Guid.NewGuid(),
+                ConversationId = Guid.Empty,
+                HypothesisId = null,
+                StepDescription = $"验证假设相关的信号或参数：{hypothesisDescription}",
+                StepType = "test",
+                ExpectedResult = "信号/参数在正常范围内",
+                VerificationStatus = "pending",
+                CreatedAt = DateTime.UtcNow
+            },
+            new VerificationStepDto
+            {
+                StepId = Guid.NewGuid(),
+                ConversationId = Guid.Empty,
+                HypothesisId = null,
+                StepDescription = $"确认假设相关的功能是否正常：{hypothesisDescription}",
+                StepType = "check",
+                ExpectedResult = "功能正常",
+                VerificationStatus = "pending",
+                CreatedAt = DateTime.UtcNow
+            }
+        };
+
+        return steps;
+    }
+
+    /// <summary>
+    /// 将置信度字符串转换为小数
+    /// </summary>
+    private decimal ConvertConfidenceToDecimal(string confidence)
+    {
+        return confidence.ToLower() switch
+        {
+            "high" => 0.8m,
+            "medium" => 0.6m,
+            "low" => 0.4m,
+            _ => 0.5m
+        };
+    }
+
+    #region Response Models
+
+    /// <summary>
+    /// 假设生成响应模型
+    /// </summary>
+    private class HypothesisGenerationResponse
+    {
+        public List<HypothesisItem> Hypotheses { get; set; } = new();
+    }
+
+    /// <summary>
+    /// 假设项
+    /// </summary>
+    private class HypothesisItem
+    {
+        public int Rank { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public string Confidence { get; set; } = "medium";
+        public List<string>? Evidence { get; set; }
+        public List<string>? SupportingKnowledgeIds { get; set; }
+    }
+
+    /// <summary>
+    /// 验证步骤生成响应模型
+    /// </summary>
+    private class VerificationStepsGenerationResponse
+    {
+        public List<VerificationStepItem> Steps { get; set; } = new();
+    }
+
+    /// <summary>
+    /// 验证步骤项
+    /// </summary>
+    private class VerificationStepItem
+    {
+        public string StepDescription { get; set; } = string.Empty;
+        public string? StepType { get; set; }
+        public string? ExpectedResult { get; set; }
+    }
+
+    #endregion
 }
 
 

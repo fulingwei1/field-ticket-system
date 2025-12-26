@@ -149,6 +149,8 @@ builder.Services.AddScoped<INewcomerGrowthService, FieldTicket.Infrastructure.Se
 builder.Services.AddScoped<IQRCodeService, FieldTicket.Infrastructure.Services.QRCodeService>();
 builder.Services.AddScoped<IKPIAnomalyService, FieldTicket.Infrastructure.Services.KPIAnomalyService>();
 builder.Services.AddScoped<IExcelImportService, FieldTicket.Infrastructure.Services.ExcelImportService>();
+builder.Services.AddScoped<IRootCauseAnalysisService, FieldTicket.Infrastructure.Services.RootCauseAnalysisService>();
+builder.Services.AddScoped<IProjectService, FieldTicket.Infrastructure.Services.ProjectService>();
 
 // 配置角色映射
 var roleMappingConfig = FieldTicket.Infrastructure.WeCom.RoleMappingConfig.LoadFromConfiguration(builder.Configuration);
@@ -229,6 +231,8 @@ app.MapQRCodeEndpoints();
 app.MapKPIAnomalyEndpoints();
 app.MapMissingInfoConversationEndpoints();
 app.MapExcelImportEndpoints();
+app.MapRootCauseAnalysisEndpoints();
+app.MapProjectEndpoints();
 app.MapFactTableEndpoints();
 
 // Health check

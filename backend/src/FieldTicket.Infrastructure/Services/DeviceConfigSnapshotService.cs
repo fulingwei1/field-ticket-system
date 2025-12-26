@@ -141,43 +141,99 @@ public class DeviceConfigSnapshotService : IDeviceConfigSnapshotService
 
     public async Task<Dictionary<string, object>> GetCurrentConfigAsync(Guid deviceId)
     {
-        // 从工单中获取当前配置（版本信息）
-        // 这里需要根据实际业务逻辑获取设备的当前配置
-        // 目前从最新的工单中获取版本信息作为当前配置
-        
-        var latestTicket = await _dbContext.Tickets
-            .Where(t => t.DeviceId == deviceId)
-            .OrderByDescending(t => t.CreatedAt)
-            .FirstOrDefaultAsync();
-
         var config = new Dictionary<string, object>();
 
-        if (latestTicket != null)
-        {
-            config["sw_version"] = latestTicket.SwVersion;
-            config["plc_version"] = latestTicket.PlcVersion;
-            config["param_version"] = latestTicket.ParamVersion;
+        // 方法1：优先从最新的配置快照中获取版本信息（最准确）
+        var latestSnapshot = await _dbContext.DeviceConfigSnapshots
+            .Where(s => s.DeviceId == deviceId)
+            .OrderByDescending(s => s.SnapshotAt)
+            .FirstOrDefaultAsync();
 
-            // 如果有事实表，也包含进去
-            if (latestTicket.FactsJson != null)
+        if (latestSnapshot != null && latestSnapshot.ConfigJson != null)
+        {
+            var snapshotConfig = JsonSerializer.Deserialize<Dictionary<string, object>>(
+                latestSnapshot.ConfigJson.RootElement.GetRawText());
+            
+            if (snapshotConfig != null)
             {
-                var facts = JsonSerializer.Deserialize<Dictionary<string, object>>(
-                    latestTicket.FactsJson.RootElement.GetRawText());
-                if (facts != null)
+                // 从快照中提取版本信息
+                if (snapshotConfig.TryGetValue("sw_version", out var swVersion))
                 {
-                    foreach (var fact in facts)
+                    config["sw_version"] = swVersion;
+                }
+                if (snapshotConfig.TryGetValue("plc_version", out var plcVersion))
+                {
+                    config["plc_version"] = plcVersion;
+                }
+                if (snapshotConfig.TryGetValue("param_version", out var paramVersion))
+                {
+                    config["param_version"] = paramVersion;
+                }
+
+                // 包含其他配置信息
+                foreach (var kvp in snapshotConfig)
+                {
+                    if (!config.ContainsKey(kvp.Key))
                     {
-                        config[$"fact_{fact.Key}"] = fact.Value;
+                        config[kvp.Key] = kvp.Value;
                     }
                 }
             }
         }
-        else
+
+        // 方法2：如果快照中没有版本信息，从最新的工单中获取（降级方案）
+        if (!config.ContainsKey("sw_version") || string.IsNullOrEmpty(config["sw_version"]?.ToString()))
         {
-            // 如果没有工单，尝试从设备表获取
-            // TODO: 如果设备表有版本字段，从这里获取
+            var latestTicket = await _dbContext.Tickets
+                .Where(t => t.DeviceId == deviceId)
+                .OrderByDescending(t => t.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (latestTicket != null)
+            {
+                if (!config.ContainsKey("sw_version") || string.IsNullOrEmpty(config["sw_version"]?.ToString()))
+                {
+                    config["sw_version"] = latestTicket.SwVersion;
+                }
+                if (!config.ContainsKey("plc_version") || string.IsNullOrEmpty(config["plc_version"]?.ToString()))
+                {
+                    config["plc_version"] = latestTicket.PlcVersion;
+                }
+                if (!config.ContainsKey("param_version") || string.IsNullOrEmpty(config["param_version"]?.ToString()))
+                {
+                    config["param_version"] = latestTicket.ParamVersion;
+                }
+
+                // 如果有事实表，也包含进去
+                if (latestTicket.FactsJson != null)
+                {
+                    var facts = JsonSerializer.Deserialize<Dictionary<string, object>>(
+                        latestTicket.FactsJson.RootElement.GetRawText());
+                    if (facts != null)
+                    {
+                        foreach (var fact in facts)
+                        {
+                            if (!config.ContainsKey($"fact_{fact.Key}"))
+                            {
+                                config[$"fact_{fact.Key}"] = fact.Value;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 方法3：如果都没有，设置默认值
+        if (!config.ContainsKey("sw_version") || string.IsNullOrEmpty(config["sw_version"]?.ToString()))
+        {
             config["sw_version"] = "";
+        }
+        if (!config.ContainsKey("plc_version") || string.IsNullOrEmpty(config["plc_version"]?.ToString()))
+        {
             config["plc_version"] = "";
+        }
+        if (!config.ContainsKey("param_version") || string.IsNullOrEmpty(config["param_version"]?.ToString()))
+        {
             config["param_version"] = "";
         }
 
