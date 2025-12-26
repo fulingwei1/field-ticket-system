@@ -141,3 +141,4 @@ ALTER TABLE solutions ADD COLUMN is_expired BOOLEAN DEFAULT FALSE;
 
 
 
+
