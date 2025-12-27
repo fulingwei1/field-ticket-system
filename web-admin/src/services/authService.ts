@@ -267,6 +267,38 @@ class AuthService {
       'Content-Type': 'application/json',
     };
   }
+
+  /**
+   * 检查当前用户是否是管理员
+   */
+  isAdmin(): boolean {
+    const user = this.getUser();
+    return user?.role === 'Admin';
+  }
+
+  /**
+   * 检查当前用户是否有指定角色
+   */
+  hasRole(role: string): boolean {
+    const user = this.getUser();
+    return user?.role === role;
+  }
+
+  /**
+   * 检查当前用户是否有任意一个指定角色
+   */
+  hasAnyRole(roles: string[]): boolean {
+    const user = this.getUser();
+    return roles.some(role => user?.role === role);
+  }
+
+  /**
+   * 获取当前用户角色
+   */
+  getRole(): string | null {
+    const user = this.getUser();
+    return user?.role || null;
+  }
 }
 
 export const authService = new AuthService();

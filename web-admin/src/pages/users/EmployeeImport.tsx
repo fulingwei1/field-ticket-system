@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   Upload,
@@ -30,7 +30,9 @@ import {
   UserAddOutlined,
   InfoCircleOutlined,
   EyeOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import type { UploadFile, UploadProps } from 'antd/es/upload';
 import {
   employeeImportService,
@@ -38,6 +40,7 @@ import {
   type EmployeeImportSuccess,
   type EmployeeImportError,
 } from '../../services/employeeImportService';
+import { authService } from '../../services/authService';
 
 const { Title, Text, Paragraph } = Typography;
 const { Step } = Steps;
@@ -47,6 +50,7 @@ const { Option } = Select;
  * 员工批量导入页面
  */
 export default function EmployeeImport() {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -55,6 +59,33 @@ export default function EmployeeImport() {
   const [overwriteExisting, setOverwriteExisting] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeImportSuccess | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+
+  // 权限检查：只有管理员可以访问
+  useEffect(() => {
+    if (!authService.isAdmin()) {
+      message.error('只有管理员才能访问员工批量导入功能');
+      navigate('/');
+    }
+  }, [navigate]);
+
+  // 如果不是管理员，显示无权限提示
+  if (!authService.isAdmin()) {
+    return (
+      <div style={{ padding: 24 }}>
+        <Result
+          status="403"
+          title="访问受限"
+          subTitle="抱歉，您没有权限访问此页面。只有管理员才能使用员工批量导入功能。"
+          icon={<StopOutlined />}
+          extra={
+            <Button type="primary" onClick={() => navigate('/')}>
+              返回首页
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   // 下载Excel模板
   const handleDownloadTemplate = async () => {

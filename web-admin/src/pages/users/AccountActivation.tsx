@@ -15,6 +15,7 @@ import {
   Col,
   Statistic,
   Alert,
+  Result,
 } from 'antd';
 import {
   CheckCircleOutlined,
@@ -22,11 +23,14 @@ import {
   SearchOutlined,
   EyeOutlined,
   TeamOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import {
   employeeImportService,
   type InactivatedUserDto,
 } from '../../services/employeeImportService';
+import { authService } from '../../services/authService';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -35,6 +39,7 @@ const { Search } = Input;
  * 账户开通页面
  */
 export default function AccountActivation() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<InactivatedUserDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -45,6 +50,33 @@ export default function AccountActivation() {
   const [activating, setActivating] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState<InactivatedUserDto | null>(null);
+
+  // 权限检查：只有管理员可以访问
+  useEffect(() => {
+    if (!authService.isAdmin()) {
+      message.error('只有管理员才能访问账户开通审核功能');
+      navigate('/');
+    }
+  }, [navigate]);
+
+  // 如果不是管理员，显示无权限提示
+  if (!authService.isAdmin()) {
+    return (
+      <div style={{ padding: 24 }}>
+        <Result
+          status="403"
+          title="访问受限"
+          subTitle="抱歉，您没有权限访问此页面。只有管理员才能使用账户开通审核功能。"
+          icon={<StopOutlined />}
+          extra={
+            <Button type="primary" onClick={() => navigate('/')}>
+              返回首页
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   useEffect(() => {
     loadInactivatedUsers();

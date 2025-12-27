@@ -16,6 +16,9 @@ import {
   DashboardOutlined,
   CustomerServiceOutlined,
   DatabaseOutlined,
+  UploadOutlined,
+  CheckCircleOutlined,
+  UserAddOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService, UserInfo } from '../services/authService';
@@ -205,6 +208,23 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       key: '/users',
       icon: <TeamOutlined />,
       label: '用户管理',
+      children: [
+        {
+          key: '/users',
+          icon: <UserOutlined />,
+          label: '用户列表',
+        },
+        {
+          key: '/users/import',
+          icon: <UploadOutlined />,
+          label: '员工批量导入',
+        },
+        {
+          key: '/users/activate',
+          icon: <CheckCircleOutlined />,
+          label: '账户开通审核',
+        },
+      ],
     },
   ];
 
@@ -246,9 +266,26 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     if (path.startsWith('/devices')) return [path];
     if (path.startsWith('/projects')) return [path];
     if (path.startsWith('/knowledge-graph')) return ['/knowledge-graph'];
-    if (path.startsWith('/users')) return ['/users'];
+    if (path.startsWith('/users')) return [path]; // 返回完整路径，支持子菜单
 
     return [];
+  };
+
+  // 获取默认展开的菜单项
+  const getOpenKeys = () => {
+    const path = location.pathname;
+    const openKeys: string[] = [];
+
+    // 根据当前路径确定需要展开的菜单
+    if (path.startsWith('/tickets')) openKeys.push('/tickets');
+    if (path.startsWith('/performance')) openKeys.push('/performance');
+    if (path.startsWith('/ai-analysis')) openKeys.push('/ai-analysis');
+    if (path.startsWith('/judgement-cards')) openKeys.push('/judgement-cards');
+    if (path.startsWith('/devices')) openKeys.push('/devices');
+    if (path.startsWith('/projects')) openKeys.push('/projects');
+    if (path.startsWith('/users')) openKeys.push('/users'); // 展开用户管理子菜单
+
+    return openKeys;
   };
 
   // 如果未登录，不渲染布局（让 React Router 处理跳转）
@@ -291,6 +328,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           theme="light"
           mode="inline"
           selectedKeys={getSelectedKeys()}
+          defaultOpenKeys={getOpenKeys()}
           items={menuItems}
           onClick={handleMenuClick}
         />
