@@ -22,7 +22,7 @@ import {
   UserOutlined,
   KeyOutlined,
 } from '@ant-design/icons';
-import { userManagementService, UserDto, UserRole } from '../../services/userManagementService';
+import { userManagementService, UserDto, UserRole, CreateUserRequest } from '../../services/userManagementService';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -45,6 +45,8 @@ const UserManagement: React.FC = () => {
   const [resetPasswordModalVisible, setResetPasswordModalVisible] = useState(false);
   const [resetPasswordUser, setResetPasswordUser] = useState<UserDto | null>(null);
   const [resetPasswordForm] = Form.useForm();
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [createForm] = Form.useForm<CreateUserRequest>();
 
   const roleMap: Record<string, { label: string; color: string; description: string }> = {
     FieldEngineer: { label: '现场工程师', color: 'blue', description: '创建工单、上传证据、验证' },
@@ -147,6 +149,31 @@ const UserManagement: React.FC = () => {
     } catch (error) {
       console.error('Failed to reset password:', error);
       message.error('密码重置失败');
+    }
+  };
+
+  const handleCreate = () => {
+    createForm.resetFields();
+    createForm.setFieldsValue({ loginType: 'Password' });
+    setCreateModalVisible(true);
+  };
+
+  const handleCreateSubmit = async () => {
+    try {
+      const values = await createForm.validateFields();
+
+      await userManagementService.createUser({
+        ...values,
+        loginType: 'Password',
+      });
+
+      message.success('用户创建成功');
+      setCreateModalVisible(false);
+      createForm.resetFields();
+      loadUsers();
+    } catch (error) {
+      console.error('Failed to create user:', error);
+      message.error('用户创建失败');
     }
   };
 
@@ -290,6 +317,13 @@ const UserManagement: React.FC = () => {
             onSearch={setSearchQuery}
             enterButton={<SearchOutlined />}
           />
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleCreate}
+          >
+            创建用户
+          </Button>
         </Space>
       </div>
 
@@ -449,6 +483,149 @@ const UserManagement: React.FC = () => {
             initialValue={true}
           >
             <Checkbox>首次登录强制修改密码（推荐）</Checkbox>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 创建用户对话框 */}
+      <Modal
+        title="创建新用户"
+        open={createModalVisible}
+        onOk={handleCreateSubmit}
+        onCancel={() => {
+          setCreateModalVisible(false);
+          createForm.resetFields();
+        }}
+        width={600}
+        okText="创建"
+        cancelText="取消"
+      >
+        <div style={{ marginBottom: 16, padding: 12, background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>
+          <div style={{ fontSize: 12, color: '#666' }}>
+            创建使用密码登录的新用户。用户首次登录时需要修改密码。
+          </div>
+        </div>
+
+        <Form
+          form={createForm}
+          layout="vertical"
+        >
+          <Form.Item
+            label="用户名"
+            name="username"
+            rules={[
+              { required: true, message: '请输入用户名' },
+              { min: 3, message: '用户名至少3个字符' },
+              { max: 50, message: '用户名最多50个字符' },
+              { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含字母、数字和下划线' },
+            ]}
+            extra="用于登录系统，只能包含字母、数字和下划线"
+          >
+            <Input
+              placeholder="请输入用户名"
+              prefix={<UserOutlined />}
+              autoComplete="off"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="姓名"
+            name="name"
+            rules={[
+              { required: true, message: '请输入姓名' },
+              { max: 100, message: '姓名最多100个字符' },
+            ]}
+          >
+            <Input
+              placeholder="请输入姓名"
+              prefix={<UserOutlined />}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="初始密码"
+            name="password"
+            rules={[
+              { required: true, message: '请输入初始密码' },
+              { min: 8, message: '密码至少8个字符' },
+              {
+                pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/,
+                message: '密码必须包含大写字母、小写字母和数字，至少8位',
+              },
+            ]}
+            extra="用户首次登录时必须修改此密码"
+          >
+            <Input.Password
+              placeholder="请输入初始密码"
+              prefix={<KeyOutlined />}
+              autoComplete="new-password"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="确认密码"
+            name="confirmPassword"
+            dependencies={['password']}
+            rules={[
+              { required: true, message: '请再次输入密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('password') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('两次输入的密码不一致'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password
+              placeholder="请再次输入密码"
+              prefix={<KeyOutlined />}
+              autoComplete="new-password"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="角色"
+            name="role"
+            rules={[{ required: true, message: '请选择角色' }]}
+          >
+            <Select placeholder="请选择角色">
+              {Object.entries(roleMap).map(([key, value]) => (
+                <Option key={key} value={key}>
+                  <Space>
+                    <Tag color={value.color}>{value.label}</Tag>
+                    <span style={{ fontSize: 12, color: '#666' }}>{value.description}</span>
+                  </Space>
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            label="邮箱"
+            name="email"
+            rules={[
+              { type: 'email', message: '请输入有效的邮箱地址' },
+            ]}
+          >
+            <Input
+              placeholder="请输入邮箱（可选）"
+              type="email"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="手机号"
+            name="mobile"
+            rules={[
+              { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号' },
+            ]}
+          >
+            <Input
+              placeholder="请输入手机号（可选）"
+              maxLength={11}
+            />
           </Form.Item>
         </Form>
       </Modal>

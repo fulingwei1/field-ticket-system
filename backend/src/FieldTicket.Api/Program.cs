@@ -188,6 +188,7 @@ app.UseAuthorization();
 
 // 映射 API 端点
 app.MapAuthEndpoints();
+app.MapUserEndpoints();
 app.MapTicketEndpoints();
 app.MapTriageEndpoints();
 app.MapSolutionEndpoints();

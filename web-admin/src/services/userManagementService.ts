@@ -33,6 +33,19 @@ export interface UserDto {
 }
 
 /**
+ * 创建用户请求
+ */
+export interface CreateUserRequest {
+  username: string;
+  name: string;
+  password: string;
+  role: UserRole;
+  email?: string;
+  mobile?: string;
+  loginType?: string;
+}
+
+/**
  * 更新用户请求
  */
 export interface UpdateUserRequest {
@@ -99,6 +112,13 @@ class UserManagementService {
    */
   async getUserById(userId: string): Promise<UserDto> {
     return request.get(`${this.baseUrl}/${userId}`);
+  }
+
+  /**
+   * 创建用户
+   */
+  async createUser(data: CreateUserRequest): Promise<UserDto> {
+    return request.post(this.baseUrl, data);
   }
 
   /**
