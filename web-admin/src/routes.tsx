@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import Login from './pages/Login';
+import Dashboard from './pages/dashboard/Dashboard';
 import TicketList from './pages/tickets/TicketList';
 import TicketKanban from './pages/tickets/TicketKanban';
 import CreateTicket from './pages/tickets/CreateTicket';
@@ -80,6 +81,10 @@ export default function AppRoutes() {
         element={
           <AppLayout>
             <Routes>
+              {/* 首页 */}
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+
               {/* 工单相关 */}
               <Route path="/tickets" element={<TicketList />} />
               <Route path="/tickets/kanban" element={<TicketKanban />} />
@@ -162,9 +167,8 @@ export default function AppRoutes() {
               
               {/* 智能阈值管理 */}
               <Route path="/thresholds" element={<ThresholdManagement />} />
-              
-              {/* 默认重定向 */}
-              <Route path="/" element={<TicketList />} />
+
+              {/* 404 页面 */}
               <Route path="*" element={<div>404 - 页面未找到</div>} />
             </Routes>
           </AppLayout>

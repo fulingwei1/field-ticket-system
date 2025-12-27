@@ -69,6 +69,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const menuItems: MenuProps['items'] = [
     {
+      key: '/',
+      icon: <DashboardOutlined />,
+      label: '首页概览',
+    },
+    {
       key: '/tickets',
       icon: <FileTextOutlined />,
       label: '工单管理',
@@ -80,7 +85,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {
           key: '/tickets/kanban',
           label: '工单看板',
-          icon: <DashboardOutlined />,
         },
         {
           key: '/tickets/new',
