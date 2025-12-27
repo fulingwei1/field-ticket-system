@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/ticket_provider.dart';
 import '../../services/ticket_service.dart';
+import 'attachments_page.dart';
 
 /// 工单详情页面
 class TicketDetailPage extends StatefulWidget {
@@ -623,14 +624,20 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   }
 
   void _viewAttachments(TicketDto ticket) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('附件查看功能开发中...')),
-    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AttachmentsPage(ticketId: ticket.ticketId),
+      ),
+    ).then((_) => _loadTicketDetail());
   }
 
   void _uploadAttachment(TicketDto ticket) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('附件上传功能开发中...')),
-    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AttachmentsPage(ticketId: ticket.ticketId),
+      ),
+    ).then((_) => _loadTicketDetail());
   }
 }

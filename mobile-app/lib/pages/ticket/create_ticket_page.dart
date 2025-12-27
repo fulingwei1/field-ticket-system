@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../providers/ticket_provider.dart';
 import '../../services/customer_service.dart';
 import '../../services/ticket_service.dart';
+import '../../services/attachment_service.dart';
+import '../../widgets/attachment_uploader.dart';
 import 'package:uuid/uuid.dart';
 
 /// 创建工单页面
@@ -34,6 +36,10 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
 
   // 事实项
   final Map<String, dynamic> _factsJson = {};
+
+  // 附件
+  final List<AttachmentData> _attachments = [];
+  final AttachmentService _attachmentService = AttachmentService();
 
   bool _isLoading = false;
   bool _isSavingDraft = false;
@@ -147,6 +153,24 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
 
             _buildSectionTitle('事实项（选填）'),
             _buildFactsSection(),
+            const SizedBox(height: 24),
+
+            _buildSectionTitle('附件'),
+            AttachmentUploader(
+              attachments: _attachments,
+              onAttachmentAdded: (attachment) {
+                setState(() {
+                  _attachments.add(attachment);
+                });
+              },
+              onAttachmentRemoved: (attachment) {
+                setState(() {
+                  _attachments.remove(attachment);
+                });
+              },
+              maxFiles: 10,
+              maxFileSize: 50 * 1024 * 1024, // 50MB
+            ),
             const SizedBox(height: 32),
 
             _buildSubmitButton(),
@@ -536,7 +560,37 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
         throw Exception('创建草稿失败');
       }
 
-      // 2. 提交工单
+      // 2. 上传附件
+      if (_attachments.isNotEmpty) {
+        for (var attachment in _attachments) {
+          try {
+            setState(() {
+              attachment.uploadProgress = 0.0;
+            });
+            await _attachmentService.uploadAttachment(
+              ticketId: ticket.ticketId,
+              file: attachment.file,
+              category: attachment.category,
+              description: attachment.description,
+              onProgress: (progress) {
+                if (mounted) {
+                  setState(() {
+                    attachment.uploadProgress = progress;
+                  });
+                }
+              },
+            );
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('附件上传失败: ${attachment.fileName}')),
+              );
+            }
+          }
+        }
+      }
+
+      // 3. 提交工单
       final result = await context.read<TicketProvider>().submitTicket(ticket.ticketId);
 
       if (mounted) {
