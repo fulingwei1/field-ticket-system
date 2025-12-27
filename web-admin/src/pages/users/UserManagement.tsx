@@ -12,6 +12,7 @@ import {
   Tag,
   Typography,
   Switch,
+  Checkbox,
 } from 'antd';
 import {
   PlusOutlined,
@@ -19,6 +20,7 @@ import {
   DeleteOutlined,
   SearchOutlined,
   UserOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 import { userManagementService, UserDto, UserRole } from '../../services/userManagementService';
 
@@ -40,6 +42,9 @@ const UserManagement: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState<UserDto | null>(null);
   const [form] = Form.useForm();
+  const [resetPasswordModalVisible, setResetPasswordModalVisible] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<UserDto | null>(null);
+  const [resetPasswordForm] = Form.useForm();
 
   const roleMap: Record<string, { label: string; color: string; description: string }> = {
     FieldEngineer: { label: '现场工程师', color: 'blue', description: '创建工单、上传证据、验证' },
@@ -116,6 +121,35 @@ const UserManagement: React.FC = () => {
     }
   };
 
+  const handleResetPassword = (user: UserDto) => {
+    setResetPasswordUser(user);
+    resetPasswordForm.resetFields();
+    resetPasswordForm.setFieldsValue({ mustChangePassword: true });
+    setResetPasswordModalVisible(true);
+  };
+
+  const handleResetPasswordSubmit = async () => {
+    try {
+      const values = await resetPasswordForm.validateFields();
+
+      if (!resetPasswordUser) return;
+
+      await userManagementService.resetPassword(
+        resetPasswordUser.id,
+        values.newPassword,
+        values.mustChangePassword ?? true
+      );
+
+      message.success('密码重置成功');
+      setResetPasswordModalVisible(false);
+      resetPasswordForm.resetFields();
+      loadUsers();
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      message.error('密码重置失败');
+    }
+  };
+
   const columns = [
     {
       title: '用户名',
@@ -163,6 +197,18 @@ const UserManagement: React.FC = () => {
       },
     },
     {
+      title: '登录方式',
+      dataIndex: 'loginType',
+      key: 'loginType',
+      width: 120,
+      render: (loginType: string) => {
+        if (loginType === 'Password') {
+          return <Tag color="blue">密码登录</Tag>;
+        }
+        return <Tag color="green">企业微信</Tag>;
+      },
+    },
+    {
       title: '状态',
       dataIndex: 'isActive',
       key: 'isActive',
@@ -186,7 +232,7 @@ const UserManagement: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 220,
       fixed: 'right' as const,
       render: (_: any, record: UserDto) => (
         <Space size="small">
@@ -198,6 +244,16 @@ const UserManagement: React.FC = () => {
           >
             编辑
           </Button>
+          {record.loginType === 'Password' && (
+            <Button
+              type="link"
+              size="small"
+              icon={<KeyOutlined />}
+              onClick={() => handleResetPassword(record)}
+            >
+              重置密码
+            </Button>
+          )}
           <Popconfirm
             title="确认删除?"
             description="删除后将无法恢复，确定要删除吗？"
@@ -255,7 +311,7 @@ const UserManagement: React.FC = () => {
         dataSource={users}
         rowKey="id"
         loading={loading}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1400 }}
         pagination={{
           current: page,
           pageSize: pageSize,
@@ -311,6 +367,88 @@ const UserManagement: React.FC = () => {
 
           <Form.Item label="状态" name="isActive" valuePropName="checked">
             <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 重置密码对话框 */}
+      <Modal
+        title="重置用户密码"
+        open={resetPasswordModalVisible}
+        onOk={handleResetPasswordSubmit}
+        onCancel={() => {
+          setResetPasswordModalVisible(false);
+          resetPasswordForm.resetFields();
+        }}
+        width={500}
+        okText="确认重置"
+        cancelText="取消"
+        okButtonProps={{ danger: true }}
+      >
+        <div style={{ marginBottom: 16, padding: 12, background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4 }}>
+          <Space direction="vertical" size={4}>
+            <div style={{ fontWeight: 500 }}>
+              <UserOutlined /> 重置用户: {resetPasswordUser?.name} ({resetPasswordUser?.username})
+            </div>
+            <div style={{ fontSize: 12, color: '#666' }}>
+              请为该用户设置新密码。建议启用"首次登录强制修改"以提升安全性。
+            </div>
+          </Space>
+        </div>
+
+        <Form
+          form={resetPasswordForm}
+          layout="vertical"
+        >
+          <Form.Item
+            label="新密码"
+            name="newPassword"
+            rules={[
+              { required: true, message: '请输入新密码' },
+              { min: 8, message: '密码至少8个字符' },
+              {
+                pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/,
+                message: '密码必须包含大写字母、小写字母和数字，至少8位',
+              },
+            ]}
+            extra="密码要求：至少8位，包含大写字母、小写字母和数字"
+          >
+            <Input.Password
+              placeholder="请输入新密码"
+              prefix={<KeyOutlined />}
+              autoComplete="new-password"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="确认密码"
+            name="confirmPassword"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: '请再次输入新密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('两次输入的密码不一致'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password
+              placeholder="请再次输入新密码"
+              prefix={<KeyOutlined />}
+              autoComplete="new-password"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="mustChangePassword"
+            valuePropName="checked"
+            initialValue={true}
+          >
+            <Checkbox>首次登录强制修改密码（推荐）</Checkbox>
           </Form.Item>
         </Form>
       </Modal>

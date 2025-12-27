@@ -15,14 +15,19 @@ export enum UserRole {
  */
 export interface UserDto {
   id: string;
-  corpId: string;
-  wecomUserId: string;
+  corpId?: string;
+  wecomUserId?: string;
+  username?: string;
   name: string;
   mobile?: string;
+  email?: string;
   deptId?: string;
   deptName?: string;
   role: UserRole;
+  loginType?: string; // 'WeCom' | 'Password'
   isActive: boolean;
+  mustChangePassword?: boolean;
+  lastPasswordChangeAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -175,6 +180,21 @@ class UserManagementService {
 
     return request.get(`${this.baseUrl}/export?${params.toString()}`, {
       responseType: 'blob',
+    });
+  }
+
+  /**
+   * 重置用户密码（管理员操作）
+   */
+  async resetPassword(
+    userId: string,
+    newPassword: string,
+    mustChangePassword: boolean = true
+  ): Promise<{ success: boolean; message: string }> {
+    return request.post('/api/auth/reset-password', {
+      userId,
+      newPassword,
+      mustChangePassword,
     });
   }
 }
