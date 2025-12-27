@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/ticket_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/ticket_service.dart';
+import '../../services/verification_service.dart';
 import 'attachments_page.dart';
+import 'verification_page.dart';
 
 /// 工单详情页面
 class TicketDetailPage extends StatefulWidget {
@@ -537,6 +540,22 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
       );
     }
 
+    // 方案已发布，显示验证按钮
+    if (ticket.status == 'SolutionIssued') {
+      buttons.add(
+        ElevatedButton.icon(
+          onPressed: () => _verifySolution(ticket),
+          icon: const Icon(Icons.check_circle),
+          label: const Text('验证方案'),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 48),
+            backgroundColor: Colors.teal,
+            foregroundColor: Colors.white,
+          ),
+        ),
+      );
+    }
+
     if (ticket.attachmentCount > 0) {
       buttons.add(
         OutlinedButton.icon(
@@ -639,5 +658,28 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         builder: (context) => AttachmentsPage(ticketId: ticket.ticketId),
       ),
     ).then((_) => _loadTicketDetail());
+  }
+
+  void _verifySolution(TicketDto ticket) {
+    final authProvider = context.read<AuthProvider>();
+    final verificationService = VerificationService(
+      baseUrl: 'http://your-api-url.com', // TODO: 从配置中获取
+      authService: authProvider.authService,
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VerificationPage(
+          ticketId: ticket.ticketId,
+          ticketNo: ticket.ticketNo,
+          verificationService: verificationService,
+        ),
+      ),
+    ).then((result) {
+      if (result == true) {
+        _loadTicketDetail(); // 验证成功后刷新工单详情
+      }
+    });
   }
 }
