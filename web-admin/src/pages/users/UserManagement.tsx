@@ -21,8 +21,10 @@ import {
   SearchOutlined,
   UserOutlined,
   KeyOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons';
 import { userManagementService, UserDto, UserRole, CreateUserRequest } from '../../services/userManagementService';
+import { employeeImportService } from '../../services/employeeImportService';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -249,6 +251,23 @@ const UserManagement: React.FC = () => {
       },
     },
     {
+      title: '开通状态',
+      dataIndex: 'isActivated',
+      key: 'isActivated',
+      width: 120,
+      render: (isActivated: boolean | undefined, record: UserDto) => {
+        // 企业微信用户默认已开通
+        if (record.loginType === 'WeCom') {
+          return <Tag color="green">已开通</Tag>;
+        }
+        // 密码登录用户检查isActivated字段
+        if (isActivated === false) {
+          return <Tag color="orange">未开通</Tag>;
+        }
+        return <Tag color="green">已开通</Tag>;
+      },
+    },
+    {
       title: '状态',
       dataIndex: 'isActive',
       key: 'isActive',
@@ -272,10 +291,40 @@ const UserManagement: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 220,
+      width: 280,
       fixed: 'right' as const,
       render: (_: any, record: UserDto) => (
         <Space size="small">
+          {/* 未开通账户显示开通按钮 */}
+          {record.loginType === 'Password' && record.isActivated === false && (
+            <Popconfirm
+              title="确认开通账户？"
+              description={`开通后，${record.name} 将可以使用其登录账号和初始密码登录系统`}
+              onConfirm={async () => {
+                try {
+                  const result = await employeeImportService.activateAccount(record.id);
+                  if (result.success) {
+                    message.success(`已开通 ${record.name} 的账户`);
+                    loadUsers();
+                  } else {
+                    message.error(result.message);
+                  }
+                } catch (error: any) {
+                  message.error(error.message || '开通失败');
+                }
+              }}
+              okText="确认开通"
+              cancelText="取消"
+            >
+              <Button
+                type="primary"
+                size="small"
+                icon={<CheckCircleOutlined />}
+              >
+                开通
+              </Button>
+            </Popconfirm>
+          )}
           <Button
             type="link"
             size="small"

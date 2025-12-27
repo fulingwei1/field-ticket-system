@@ -40,6 +40,8 @@ import UserProfile from './pages/user-profile/UserProfile';
 import ThresholdManagement from './pages/thresholds/ThresholdManagement';
 import CustomerList from './pages/customers/CustomerList';
 import UserManagement from './pages/users/UserManagement';
+import EmployeeImport from './pages/users/EmployeeImport';
+import AccountActivation from './pages/users/AccountActivation';
 import AppLayout from './components/AppLayout';
 
 /**
@@ -142,7 +144,9 @@ export default function AppRoutes() {
 
               {/* 用户管理 */}
               <Route path="/users" element={<UserManagement />} />
-              
+              <Route path="/users/import" element={<EmployeeImport />} />
+              <Route path="/users/activate" element={<AccountActivation />} />
+
               {/* 知识图谱 */}
               <Route path="/knowledge-graph" element={<KnowledgeGraphVisualization />} />
               

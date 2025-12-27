@@ -23,9 +23,12 @@ export interface UserDto {
   email?: string;
   deptId?: string;
   deptName?: string;
+  supervisorId?: string;
+  supervisorName?: string;
   role: UserRole;
   loginType?: string; // 'WeCom' | 'Password'
   isActive: boolean;
+  isActivated?: boolean; // 账户是否已开通（针对导入的用户）
   mustChangePassword?: boolean;
   lastPasswordChangeAt?: string;
   createdAt: string;
