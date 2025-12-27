@@ -279,6 +279,13 @@ public class AuthService : IAuthService
                 throw new UnauthorizedAccessException("Invalid username or password");
             }
 
+            // 检查账户是否已开通
+            if (!user.IsActivated)
+            {
+                _logger.LogWarning("Login failed: account not activated - {Username}", username);
+                throw new UnauthorizedAccessException("账户未开通，请联系管理员");
+            }
+
             // 2. 验证密码
             if (string.IsNullOrEmpty(user.PasswordHash) || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
             {

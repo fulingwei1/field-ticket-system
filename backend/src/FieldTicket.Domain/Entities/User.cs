@@ -15,7 +15,15 @@ public class User
     public string Name { get; set; } = string.Empty;
     public string? Mobile { get; set; }
     public string? DeptId { get; set; }
+    public string? DeptName { get; set; }
     public string Role { get; set; } = string.Empty;
+
+    // 上级关系
+    public Guid? SupervisorId { get; set; }
+    public string? SupervisorName { get; set; }
+
+    // 身份证后4位（加密存储，用于密码验证）
+    public string? IdCardLastFour { get; set; }
 
     // 用户名密码登录字段
     public string? Username { get; set; }
@@ -31,6 +39,12 @@ public class User
 
     // 状态
     public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// 是否已开通账户（导入后需要管理员手动开通）
+    /// </summary>
+    public bool IsActivated { get; set; } = false;
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
