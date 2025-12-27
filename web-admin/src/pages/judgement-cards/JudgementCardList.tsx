@@ -25,31 +25,11 @@ import {
   StarOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { judgementCardService, JudgementCardDto, ProblemDomain } from '../../services/judgementCardService';
 
 const { Title, Text } = Typography;
 const { Search, TextArea } = Input;
 const { Option } = Select;
-
-interface JudgementCardDto {
-  cardId: string;
-  cardTitle: string;
-  cardContent: string;
-  domain: string;
-  procedureSteps?: string[];
-  versionChannel?: string;
-  plcVersionRange?: string;
-  uiVersionRange?: string;
-  hwVersionRange?: string;
-  confidence: number;
-  qualityScore?: number;
-  usageCount: number;
-  successRate?: number;
-  isActive: boolean;
-  createdBy: string;
-  createdByName?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 /**
  * 判断卡管理页面
@@ -83,56 +63,14 @@ const JudgementCardList: React.FC = () => {
   const loadCards = async () => {
     setLoading(true);
     try {
-      // TODO: 调用实际的 API
-      // const result = await judgementCardService.getCards({
-      //   page,
-      //   pageSize,
-      //   searchQuery,
-      //   domain: selectedDomain,
-      // });
-      // setCards(result.items);
-      // setTotal(result.total);
-
-      // 模拟数据
-      const mockCards: JudgementCardDto[] = [
-        {
-          cardId: '1',
-          cardTitle: '伺服电机不响应',
-          cardContent: '检查伺服电机连接线、驱动器状态、PLC输出信号...',
-          domain: 'B',
-          procedureSteps: ['工位1', '工位2'],
-          versionChannel: 'Stable',
-          plcVersionRange: '>=2.0.0',
-          confidence: 0.85,
-          qualityScore: 4.5,
-          usageCount: 45,
-          successRate: 0.92,
-          isActive: true,
-          createdBy: '1',
-          createdByName: '张三',
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-15',
-        },
-        {
-          cardId: '2',
-          cardTitle: '气缸动作异常',
-          cardContent: '检查气压、电磁阀、位置传感器...',
-          domain: 'A',
-          procedureSteps: ['工位3'],
-          versionChannel: 'Beta',
-          confidence: 0.78,
-          qualityScore: 4.0,
-          usageCount: 23,
-          successRate: 0.87,
-          isActive: true,
-          createdBy: '1',
-          createdByName: '张三',
-          createdAt: '2024-01-05',
-          updatedAt: '2024-01-10',
-        },
-      ];
-      setCards(mockCards);
-      setTotal(mockCards.length);
+      const result = await judgementCardService.getCards({
+        page,
+        pageSize,
+        searchQuery,
+        domain: selectedDomain as ProblemDomain,
+      });
+      setCards(result.items);
+      setTotal(result.total);
     } catch (error) {
       console.error('Failed to load cards:', error);
       message.error('加载判断卡列表失败');
@@ -163,7 +101,7 @@ const JudgementCardList: React.FC = () => {
 
   const handleCopy = async (card: JudgementCardDto) => {
     try {
-      // TODO: 调用 API 复制判断卡
+      await judgementCardService.copyCard(card.cardId, `${card.cardTitle} - 副本`);
       message.success('复制成功');
       loadCards();
     } catch (error) {
@@ -174,8 +112,7 @@ const JudgementCardList: React.FC = () => {
 
   const handleDelete = async (cardId: string) => {
     try {
-      // TODO: 调用实际的 API
-      // await judgementCardService.deleteCard(cardId);
+      await judgementCardService.deleteCard(cardId);
       message.success('删除成功');
       loadCards();
     } catch (error) {
@@ -201,13 +138,18 @@ const JudgementCardList: React.FC = () => {
         values.procedureSteps = values.procedureSteps.split(',').map((s: string) => s.trim());
       }
 
+      // 处理置信度：Rate组件返回1-5，需要转换为0-1
+      if (values.confidence) {
+        values.confidence = values.confidence / 5;
+      }
+
       if (editingCard) {
         // 更新
-        // await judgementCardService.updateCard(editingCard.cardId, values);
+        await judgementCardService.updateCard(editingCard.cardId, values);
         message.success('更新成功');
       } else {
         // 创建
-        // await judgementCardService.createCard(values);
+        await judgementCardService.createCard(values);
         message.success('创建成功');
       }
 

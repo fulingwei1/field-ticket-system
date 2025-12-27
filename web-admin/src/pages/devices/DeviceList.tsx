@@ -22,30 +22,11 @@ import {
   HistoryOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { deviceService, DeviceDto } from '../../services/deviceService';
 
 const { Title } = Typography;
 const { Search } = Input;
 const { Option } = Select;
-
-interface DeviceDto {
-  deviceId: string;
-  deviceSn: string;
-  deviceName: string;
-  deviceModel?: string;
-  customerId: string;
-  customerName: string;
-  projectId?: string;
-  projectName?: string;
-  plcVersion?: string;
-  uiVersion?: string;
-  hwVersion?: string;
-  installDate?: string;
-  location?: string;
-  description?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
 /**
  * 设备管理页面
@@ -70,39 +51,13 @@ const DeviceList: React.FC = () => {
   const loadDevices = async () => {
     setLoading(true);
     try {
-      // TODO: 调用实际的 API
-      // const result = await deviceService.getDevices({
-      //   page,
-      //   pageSize,
-      //   searchQuery,
-      // });
-      // setDevices(result.items);
-      // setTotal(result.total);
-
-      // 模拟数据
-      const mockDevices: DeviceDto[] = [
-        {
-          deviceId: '1',
-          deviceSn: 'DEV-2024-001',
-          deviceName: '自动化产线A-1',
-          deviceModel: 'Model-X100',
-          customerId: '1',
-          customerName: '示例客户A',
-          projectId: '1',
-          projectName: '项目A',
-          plcVersion: 'v2.1.0',
-          uiVersion: 'v1.5.2',
-          hwVersion: 'v3.0.0',
-          installDate: '2024-01-15',
-          location: '车间1-A区',
-          description: '主产线设备',
-          isActive: true,
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01',
-        },
-      ];
-      setDevices(mockDevices);
-      setTotal(mockDevices.length);
+      const result = await deviceService.getDevices({
+        page,
+        pageSize,
+        searchQuery,
+      });
+      setDevices(result.items);
+      setTotal(result.total);
     } catch (error) {
       console.error('Failed to load devices:', error);
       message.error('加载设备列表失败');
@@ -125,8 +80,7 @@ const DeviceList: React.FC = () => {
 
   const handleDelete = async (deviceId: string) => {
     try {
-      // TODO: 调用实际的 API
-      // await deviceService.deleteDevice(deviceId);
+      await deviceService.deleteDevice(deviceId);
       message.success('删除成功');
       loadDevices();
     } catch (error) {
@@ -141,11 +95,11 @@ const DeviceList: React.FC = () => {
 
       if (editingDevice) {
         // 更新
-        // await deviceService.updateDevice(editingDevice.deviceId, values);
+        await deviceService.updateDevice(editingDevice.deviceId, values);
         message.success('更新成功');
       } else {
         // 创建
-        // await deviceService.createDevice(values);
+        await deviceService.createDevice(values);
         message.success('创建成功');
       }
 

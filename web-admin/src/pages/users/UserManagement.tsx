@@ -20,24 +20,11 @@ import {
   SearchOutlined,
   UserOutlined,
 } from '@ant-design/icons';
+import { userManagementService, UserDto, UserRole } from '../../services/userManagementService';
 
 const { Title } = Typography;
 const { Search } = Input;
 const { Option } = Select;
-
-interface UserDto {
-  id: string;
-  corpId: string;
-  wecomUserId: string;
-  name: string;
-  mobile?: string;
-  deptId?: string;
-  deptName?: string;
-  role: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
 /**
  * 用户管理页面
@@ -68,59 +55,13 @@ const UserManagement: React.FC = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      // TODO: 调用实际的 API
-      // const result = await userService.getUsers({
-      //   page,
-      //   pageSize,
-      //   searchQuery,
-      // });
-      // setUsers(result.items);
-      // setTotal(result.total);
-
-      // 模拟数据
-      const mockUsers: UserDto[] = [
-        {
-          id: '1',
-          corpId: 'corp123',
-          wecomUserId: 'user001',
-          name: '张三',
-          mobile: '13800138000',
-          deptId: 'dept1',
-          deptName: '研发部',
-          role: 'SeniorEngineer',
-          isActive: true,
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01',
-        },
-        {
-          id: '2',
-          corpId: 'corp123',
-          wecomUserId: 'user002',
-          name: '李四',
-          mobile: '13900139000',
-          deptId: 'dept2',
-          deptName: '客服部',
-          role: 'CS',
-          isActive: true,
-          createdAt: '2024-01-02',
-          updatedAt: '2024-01-02',
-        },
-        {
-          id: '3',
-          corpId: 'corp123',
-          wecomUserId: 'user003',
-          name: '王五',
-          mobile: '13700137000',
-          deptId: 'dept1',
-          deptName: '研发部',
-          role: 'FieldEngineer',
-          isActive: true,
-          createdAt: '2024-01-03',
-          updatedAt: '2024-01-03',
-        },
-      ];
-      setUsers(mockUsers);
-      setTotal(mockUsers.length);
+      const result = await userManagementService.getUsers({
+        page,
+        pageSize,
+        searchQuery,
+      });
+      setUsers(result.items);
+      setTotal(result.total);
     } catch (error) {
       console.error('Failed to load users:', error);
       message.error('加载用户列表失败');
@@ -137,8 +78,7 @@ const UserManagement: React.FC = () => {
 
   const handleDelete = async (userId: string) => {
     try {
-      // TODO: 调用实际的 API
-      // await userService.deleteUser(userId);
+      await userManagementService.deleteUser(userId);
       message.success('删除成功');
       loadUsers();
     } catch (error) {
@@ -149,8 +89,7 @@ const UserManagement: React.FC = () => {
 
   const handleToggleStatus = async (userId: string, isActive: boolean) => {
     try {
-      // TODO: 调用实际的 API
-      // await userService.updateUserStatus(userId, isActive);
+      await userManagementService.updateUserStatus(userId, isActive);
       message.success(isActive ? '已启用' : '已禁用');
       loadUsers();
     } catch (error) {
@@ -165,7 +104,7 @@ const UserManagement: React.FC = () => {
 
       if (editingUser) {
         // 更新
-        // await userService.updateUser(editingUser.id, values);
+        await userManagementService.updateUser(editingUser.id, values);
         message.success('更新成功');
       }
 

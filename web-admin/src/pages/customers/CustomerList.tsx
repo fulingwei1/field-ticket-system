@@ -17,24 +17,10 @@ import {
   DeleteOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
+import { customerService, CustomerDto } from '../../services/customerService';
 
 const { Title } = Typography;
 const { Search } = Input;
-
-interface CustomerDto {
-  customerId: string;
-  customerCode: string;
-  customerName: string;
-  industry?: string;
-  contactPerson?: string;
-  contactPhone?: string;
-  contactEmail?: string;
-  address?: string;
-  description?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
 /**
  * 客户管理页面
@@ -58,34 +44,13 @@ const CustomerList: React.FC = () => {
   const loadCustomers = async () => {
     setLoading(true);
     try {
-      // TODO: 调用实际的 API
-      // const result = await customerService.getCustomers({
-      //   page,
-      //   pageSize,
-      //   searchQuery,
-      // });
-      // setCustomers(result.items);
-      // setTotal(result.total);
-
-      // 模拟数据
-      const mockCustomers: CustomerDto[] = [
-        {
-          customerId: '1',
-          customerCode: 'C001',
-          customerName: '示例客户A',
-          industry: '汽车制造',
-          contactPerson: '张三',
-          contactPhone: '13800138000',
-          contactEmail: 'zhangsan@example.com',
-          address: '上海市浦东新区',
-          description: '重要客户',
-          isActive: true,
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01',
-        },
-      ];
-      setCustomers(mockCustomers);
-      setTotal(mockCustomers.length);
+      const result = await customerService.getCustomers({
+        page,
+        pageSize,
+        searchQuery,
+      });
+      setCustomers(result.items);
+      setTotal(result.total);
     } catch (error) {
       console.error('Failed to load customers:', error);
       message.error('加载客户列表失败');
@@ -108,8 +73,7 @@ const CustomerList: React.FC = () => {
 
   const handleDelete = async (customerId: string) => {
     try {
-      // TODO: 调用实际的 API
-      // await customerService.deleteCustomer(customerId);
+      await customerService.deleteCustomer(customerId);
       message.success('删除成功');
       loadCustomers();
     } catch (error) {
@@ -124,11 +88,11 @@ const CustomerList: React.FC = () => {
 
       if (editingCustomer) {
         // 更新
-        // await customerService.updateCustomer(editingCustomer.customerId, values);
+        await customerService.updateCustomer(editingCustomer.customerId, values);
         message.success('更新成功');
       } else {
         // 创建
-        // await customerService.createCustomer(values);
+        await customerService.createCustomer(values);
         message.success('创建成功');
       }
 
