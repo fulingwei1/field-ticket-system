@@ -15,10 +15,14 @@ export interface AuthResult {
 
 export interface UserInfo {
   id: string;
+  username: string;
   name: string;
   mobile?: string;
+  email?: string;
   role: string;
   deptName?: string;
+  loginType: string;
+  mustChangePassword: boolean;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -27,6 +31,65 @@ class AuthService {
   private tokenKey = 'field_ticket_token';
   private refreshTokenKey = 'field_ticket_refresh_token';
   private userKey = 'field_ticket_user';
+
+  // ========== 用户名密码登录 ==========
+
+  /**
+   * 用户名密码登录
+   */
+  async passwordLogin(username: string, password: string, rememberMe: boolean = false): Promise<AuthResult> {
+    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username,
+        password,
+        rememberMe,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '登录失败' }));
+      throw new Error(errorData.message || '用户名或密码错误');
+    }
+
+    const result: AuthResult = await response.json();
+    this.saveAuth(result);
+    return result;
+  }
+
+  /**
+   * 修改密码
+   */
+  async changePassword(oldPassword: string, newPassword: string): Promise<boolean> {
+    const token = this.getToken();
+    if (!token) {
+      throw new Error('未登录');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        oldPassword,
+        newPassword,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '修改密码失败' }));
+      throw new Error(errorData.message || '修改密码失败');
+    }
+
+    return true;
+  }
+
+  // ========== 企业微信登录 ==========
 
   /**
    * 获取企业微信登录URL
@@ -64,6 +127,8 @@ class AuthService {
     this.saveAuth(result);
     return result;
   }
+
+  // ========== 公共方法 ==========
 
   /**
    * 刷新Token

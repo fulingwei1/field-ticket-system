@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import Login from './pages/Login';
+import ChangePassword from './pages/ChangePassword';
 import Dashboard from './pages/dashboard/Dashboard';
 import TicketList from './pages/tickets/TicketList';
 import TicketKanban from './pages/tickets/TicketKanban';
@@ -74,7 +75,9 @@ export default function AppRoutes() {
       <Route path="/test" element={<TestPage />} />
       {/* 登录页（不使用布局） */}
       <Route path="/login" element={<Login />} />
-    
+      {/* 修改密码页（不使用布局） */}
+      <Route path="/change-password" element={<ChangePassword />} />
+
       {/* 需要布局的页面 */}
       <Route
         path="/*"
