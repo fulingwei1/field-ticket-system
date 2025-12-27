@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../services/attachment_service.dart';
+import '../../widgets/video_player_widget.dart';
 
 /// 附件查看页面
 class AttachmentsPage extends StatefulWidget {
@@ -219,6 +222,21 @@ class _AttachmentsPageState extends State<AttachmentsPage> {
           ),
         ),
       );
+    } else if (attachment.isVideo) {
+      // 播放视频
+      final videoUrl = _attachmentService.getAttachmentUrl(
+        widget.ticketId,
+        attachment.attachmentId,
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => VideoPlayerPage(
+            videoUrl: videoUrl,
+            title: attachment.fileName,
+          ),
+        ),
+      );
     } else {
       // 显示附件详情和操作选项
       _showAttachmentOptions(attachment);
@@ -257,9 +275,18 @@ class _AttachmentsPageState extends State<AttachmentsPage> {
                   title: const Text('播放'),
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: 实现视频播放
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('视频播放功能开发中...')),
+                    final videoUrl = _attachmentService.getAttachmentUrl(
+                      widget.ticketId,
+                      attachment.attachmentId,
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => VideoPlayerPage(
+                          videoUrl: videoUrl,
+                          title: attachment.fileName,
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -279,10 +306,55 @@ class _AttachmentsPageState extends State<AttachmentsPage> {
   }
 
   Future<void> _downloadAttachment(AttachmentDto attachment) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('下载功能开发中...')),
-    );
-    // TODO: 实现下载功能
+    try {
+      // 获取下载目录
+      Directory? directory;
+      if (Platform.isAndroid) {
+        // Android: 使用外部存储的 Downloads 目录
+        directory = await getExternalStorageDirectory();
+        if (directory != null) {
+          // 创建 Downloads 子目录
+          final downloadPath = Directory('${directory.path}/Downloads');
+          if (!await downloadPath.exists()) {
+            await downloadPath.create(recursive: true);
+          }
+          directory = downloadPath;
+        }
+      } else if (Platform.isIOS) {
+        // iOS: 使用应用文档目录
+        directory = await getApplicationDocumentsDirectory();
+      }
+
+      if (directory == null) {
+        throw Exception('无法获取存储目录');
+      }
+
+      // 构建保存路径
+      final savePath = '${directory.path}/${attachment.fileName}';
+
+      // 显示下载进度对话框
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => _DownloadProgressDialog(
+          fileName: attachment.fileName,
+          onDownload: () async {
+            return await _attachmentService.downloadAttachment(
+              ticketId: widget.ticketId,
+              attachmentId: attachment.attachmentId,
+              savePath: savePath,
+            );
+          },
+          savePath: savePath,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('下载失败: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _deleteAttachment(AttachmentDto attachment) async {
@@ -375,6 +447,131 @@ class ImageViewPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 下载进度对话框
+class _DownloadProgressDialog extends StatefulWidget {
+  final String fileName;
+  final Future<File> Function() onDownload;
+  final String savePath;
+
+  const _DownloadProgressDialog({
+    required this.fileName,
+    required this.onDownload,
+    required this.savePath,
+  });
+
+  @override
+  State<_DownloadProgressDialog> createState() => _DownloadProgressDialogState();
+}
+
+class _DownloadProgressDialogState extends State<_DownloadProgressDialog> {
+  double _progress = 0.0;
+  bool _isDownloading = true;
+  bool _hasError = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _startDownload();
+  }
+
+  Future<void> _startDownload() async {
+    try {
+      await widget.onDownload();
+
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _progress = 1.0;
+        });
+
+        // 等待一小段时间显示完成状态
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (mounted) {
+          // 关闭进度对话框
+          Navigator.pop(context);
+
+          // 显示成功消息
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('下载成功'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('文件已保存到:'),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.savePath,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('确定'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _hasError = true;
+          _errorMessage = e.toString();
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(_hasError ? '下载失败' : (_isDownloading ? '下载中' : '下载完成')),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(widget.fileName),
+          const SizedBox(height: 16),
+          if (_hasError)
+            Column(
+              children: [
+                const Icon(Icons.error, color: Colors.red, size: 48),
+                const SizedBox(height: 8),
+                Text(
+                  _errorMessage ?? '未知错误',
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            )
+          else ...[
+            LinearProgressIndicator(value: _isDownloading ? null : 1.0),
+            const SizedBox(height: 8),
+            if (_isDownloading)
+              const Text('正在下载...')
+            else
+              const Text('100%'),
+          ],
+        ],
+      ),
+      actions: [
+        if (_hasError)
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+      ],
     );
   }
 }
