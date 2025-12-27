@@ -13,6 +13,9 @@ import {
   SafetyOutlined,
   SettingOutlined,
   ToolOutlined,
+  DashboardOutlined,
+  CustomerServiceOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService, UserInfo } from '../services/authService';
@@ -75,6 +78,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           label: '工单列表',
         },
         {
+          key: '/tickets/kanban',
+          label: '工单看板',
+          icon: <DashboardOutlined />,
+        },
+        {
           key: '/tickets/new',
           label: '创建工单',
           icon: <PlusOutlined />,
@@ -131,6 +139,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       label: '判断卡管理',
       children: [
         {
+          key: '/judgement-cards',
+          label: '判断卡列表',
+        },
+        {
           key: '/judgement-cards/quality',
           label: '质量评分',
         },
@@ -141,10 +153,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       ],
     },
     {
+      key: '/customers',
+      icon: <CustomerServiceOutlined />,
+      label: '客户管理',
+    },
+    {
       key: '/devices',
       icon: <SettingOutlined />,
       label: '设备管理',
       children: [
+        {
+          key: '/devices',
+          label: '设备列表',
+        },
         {
           key: '/devices/config-snapshot',
           label: '配置快照',
@@ -161,11 +182,25 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       label: '项目管理',
       children: [
         {
+          key: '/projects',
+          label: '项目列表',
+        },
+        {
           key: '/projects/excel-import',
           label: 'Excel导入',
           icon: <PlusOutlined />,
         },
       ],
+    },
+    {
+      key: '/knowledge-graph',
+      icon: <DatabaseOutlined />,
+      label: '知识图谱',
+    },
+    {
+      key: '/users',
+      icon: <TeamOutlined />,
+      label: '用户管理',
     },
   ];
 
@@ -195,15 +230,20 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   // 获取当前选中的菜单项
   const getSelectedKeys = () => {
     const path = location.pathname;
-    if (path.startsWith('/performance')) {
-      return [path];
-    }
-    if (path.startsWith('/tickets')) {
-      return [path];
-    }
-    if (path.startsWith('/corrective-actions')) {
-      return [path];
-    }
+
+    // 对于各个模块，返回当前路径
+    if (path.startsWith('/tickets')) return [path];
+    if (path.startsWith('/performance')) return [path];
+    if (path.startsWith('/statistics')) return ['/statistics'];
+    if (path.startsWith('/corrective-actions')) return [path];
+    if (path.startsWith('/ai-analysis')) return ['/ai-analysis'];
+    if (path.startsWith('/judgement-cards')) return [path];
+    if (path.startsWith('/customers')) return ['/customers'];
+    if (path.startsWith('/devices')) return [path];
+    if (path.startsWith('/projects')) return [path];
+    if (path.startsWith('/knowledge-graph')) return ['/knowledge-graph'];
+    if (path.startsWith('/users')) return ['/users'];
+
     return [];
   };
 
