@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import Login from './pages/Login';
 import TicketList from './pages/tickets/TicketList';
+import TicketKanban from './pages/tickets/TicketKanban';
 import CreateTicket from './pages/tickets/CreateTicket';
 import TicketDetail from './pages/tickets/TicketDetail';
 import TriagePanel from './pages/tickets/TriagePanel';
@@ -17,8 +18,10 @@ import AIAttribution from './pages/attribution/AIAttribution';
 import NotificationRuleConfig from './pages/notification-rules/NotificationRuleConfig';
 import KnowledgeGraphVisualization from './pages/knowledge-graph/KnowledgeGraphVisualization';
 import VersionHistory from './pages/knowledge/VersionHistory';
+import JudgementCardList from './pages/judgement-cards/JudgementCardList';
 import JudgementCardQuality from './pages/judgement-cards/JudgementCardQuality';
 import JudgementCardVersion from './pages/judgement-cards/JudgementCardVersion';
+import DeviceList from './pages/devices/DeviceList';
 import DeviceConfigSnapshot from './pages/devices/DeviceConfigSnapshot';
 import TicketTemplateList from './pages/tickets/TicketTemplateList';
 import StatisticsDashboard from './pages/statistics/Dashboard';
@@ -33,6 +36,8 @@ import ProblemDetail from './pages/projects/ProblemDetail';
 import ProblemStatistics from './pages/projects/ProblemStatistics';
 import UserProfile from './pages/user-profile/UserProfile';
 import ThresholdManagement from './pages/thresholds/ThresholdManagement';
+import CustomerList from './pages/customers/CustomerList';
+import UserManagement from './pages/users/UserManagement';
 import AppLayout from './components/AppLayout';
 
 /**
@@ -77,6 +82,7 @@ export default function AppRoutes() {
             <Routes>
               {/* 工单相关 */}
               <Route path="/tickets" element={<TicketList />} />
+              <Route path="/tickets/kanban" element={<TicketKanban />} />
               <Route path="/tickets/new" element={<CreateTicket />} />
               <Route path="/tickets/create" element={<CreateTicket />} />
               <Route path="/tickets/templates" element={<TicketTemplateList />} />
@@ -114,12 +120,20 @@ export default function AppRoutes() {
               <Route path="/notification-rules" element={<NotificationRuleConfig />} />
               
               {/* 判断卡管理 */}
+              <Route path="/judgement-cards" element={<JudgementCardList />} />
               <Route path="/judgement-cards/quality" element={<JudgementCardQuality />} />
               <Route path="/judgement-cards/version" element={<JudgementCardVersion />} />
-              
-              {/* 设备配置管理 */}
+
+              {/* 设备管理 */}
+              <Route path="/devices" element={<DeviceList />} />
               <Route path="/devices/config-snapshot" element={<DeviceConfigSnapshot />} />
               <Route path="/devices/qrcode-generator" element={<QRCodeGenerator />} />
+
+              {/* 客户管理 */}
+              <Route path="/customers" element={<CustomerList />} />
+
+              {/* 用户管理 */}
+              <Route path="/users" element={<UserManagement />} />
               
               {/* 知识图谱 */}
               <Route path="/knowledge-graph" element={<KnowledgeGraphVisualization />} />
