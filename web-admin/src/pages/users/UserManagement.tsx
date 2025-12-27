@@ -179,7 +179,7 @@ const UserManagement: React.FC = () => {
 
   const columns = [
     {
-      title: '用户名',
+      title: '姓名',
       dataIndex: 'name',
       key: 'name',
       width: 120,
@@ -192,10 +192,23 @@ const UserManagement: React.FC = () => {
       ),
     },
     {
+      title: '登录账号',
+      dataIndex: 'username',
+      key: 'username',
+      width: 140,
+      render: (username: string | undefined, record: UserDto) => {
+        if (record.loginType === 'Password' && username) {
+          return <span style={{ fontFamily: 'monospace', color: '#1890ff' }}>{username}</span>;
+        }
+        return <span style={{ color: '#999' }}>-</span>;
+      },
+    },
+    {
       title: '企业微信ID',
       dataIndex: 'wecomUserId',
       key: 'wecomUserId',
       width: 150,
+      render: (wecomUserId: string | undefined) => wecomUserId || <span style={{ color: '#999' }}>-</span>,
     },
     {
       title: '手机号',
@@ -345,7 +358,7 @@ const UserManagement: React.FC = () => {
         dataSource={users}
         rowKey="id"
         loading={loading}
-        scroll={{ x: 1400 }}
+        scroll={{ x: 1500 }}
         pagination={{
           current: page,
           pageSize: pageSize,
