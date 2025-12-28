@@ -13,6 +13,7 @@ public class ImportTaskDto
     public DateTime CreatedAt { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+    public Guid CreatedById { get; set; }
     public string CreatedByName { get; set; } = string.Empty;
     public string FileName { get; set; } = string.Empty;
     public int TotalCount { get; set; }

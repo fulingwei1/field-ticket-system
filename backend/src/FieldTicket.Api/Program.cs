@@ -156,6 +156,10 @@ builder.Services.AddScoped<EmployeeUpdateService>();
 builder.Services.AddScoped<OperationLogService>();
 builder.Services.AddScoped<ISolutionRecommendationService, SolutionRecommendationService>();
 builder.Services.AddScoped<IFieldProblemAutoGenerationService, FieldProblemAutoGenerationService>();
+builder.Services.AddScoped<AsyncImportTaskService>();
+
+// 注册后台服务
+builder.Services.AddHostedService<ImportTaskBackgroundService>();
 
 // 配置角色映射
 var roleMappingConfig = FieldTicket.Infrastructure.WeCom.RoleMappingConfig.LoadFromConfiguration(builder.Configuration);
@@ -246,6 +250,7 @@ app.MapRootCauseAnalysisEndpoints();
 app.MapProjectEndpoints();
 app.MapFactTableEndpoints();
 app.MapFieldProblemEndpoints();
+app.MapImportTaskEndpoints();
 
 // Health check
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
