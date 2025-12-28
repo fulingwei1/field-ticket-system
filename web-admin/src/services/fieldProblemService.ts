@@ -58,6 +58,30 @@ export interface RepeatDetectionResponse {
   similarityScore: number;
 }
 
+// 现场问题DTO
+export interface FieldProblemDto {
+  problemId: string;
+  projectId: string;
+  projectName: string;
+  problemSequence: number;
+  problemCategory: string;
+  problemDescription: string;
+  priority?: string;
+  foundDate: string;
+  completedDate?: string;
+  processingDays?: number;
+  primaryDepartment: string;
+  primaryResponsible: string;
+  status: string;
+  solution?: string;
+  isRepeatProblem: boolean;
+  relatedHistoryProblemId?: string;
+  relatedTicketId?: string;
+  relatedTicketNo?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 class FieldProblemService {
   private baseUrl = '/api/field-problems';
 
@@ -100,6 +124,20 @@ class FieldProblemService {
     if (days !== undefined) params.days = days;
 
     return request.get(`${this.baseUrl}/hotspots`, { params });
+  }
+
+  /**
+   * 获取工单关联的问题记录
+   */
+  async getProblemByTicket(ticketId: string): Promise<FieldProblemDto | null> {
+    try {
+      return await request.get(`${this.baseUrl}/by-ticket/${ticketId}`);
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
   }
 }
 

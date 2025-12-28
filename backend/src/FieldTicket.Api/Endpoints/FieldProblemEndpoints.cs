@@ -43,6 +43,14 @@ public static class FieldProblemEndpoints
             .WithDescription("获取问题热点（高频问题Top-N）")
             .Produces<List<ProblemHotspotDto>>(200)
             .Produces(401);
+
+        // 获取工单关联的问题记录
+        group.MapGet("/by-ticket/{ticketId:guid}", GetProblemByTicket)
+            .WithName("GetFieldProblemByTicket")
+            .WithDescription("获取工单关联的问题记录")
+            .Produces<FieldProblemDto>(200)
+            .Produces(404)
+            .Produces(401);
     }
 
     /// <summary>
@@ -180,6 +188,38 @@ public static class FieldProblemEndpoints
             logger.LogError(ex, "Error getting problem hotspots");
             return Results.Problem(
                 title: "获取问题热点失败",
+                detail: ex.Message,
+                statusCode: 500);
+        }
+    }
+
+    /// <summary>
+    /// 获取工单关联的问题记录
+    /// </summary>
+    [Authorize]
+    private static async Task<IResult> GetProblemByTicket(
+        Guid ticketId,
+        [FromServices] IFieldProblemAutoGenerationService autoGenerationService,
+        [FromServices] ILogger<Program> logger)
+    {
+        try
+        {
+            logger.LogInformation("Getting field problem for ticket: {TicketId}", ticketId);
+
+            var problem = await autoGenerationService.GetProblemByTicketIdAsync(ticketId);
+
+            if (problem == null)
+            {
+                return Results.NotFound(new { message = "该工单尚未生成问题记录" });
+            }
+
+            return Results.Ok(problem);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting field problem for ticket {TicketId}", ticketId);
+            return Results.Problem(
+                title: "获取问题记录失败",
                 detail: ex.Message,
                 statusCode: 500);
         }

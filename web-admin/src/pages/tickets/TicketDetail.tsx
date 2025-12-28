@@ -28,11 +28,13 @@ import {
   MessageOutlined,
   InfoCircleOutlined,
   BulbOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons';
 import { ticketService, TicketDto } from '../../services/ticketService';
 import { solutionService, SolutionDto } from '../../services/solutionService';
 import { verificationService, VerificationDto } from '../../services/verificationService';
 import { attachmentService } from '../../services/attachmentService';
+import fieldProblemService, { FieldProblemDto } from '../../services/fieldProblemService';
 import { MissingInfoQuestionnaire } from '../../components/tickets/MissingInfoQuestionnaire';
 import { AIEnhancedMissingInfoQuestionnaire } from '../../components/tickets/AIEnhancedMissingInfoQuestionnaire';
 import TicketStatusFlow from '../../components/tickets/TicketStatusFlow';
@@ -52,6 +54,7 @@ export default function TicketDetail() {
   const [solutions, setSolutions] = useState<SolutionDto[]>([]);
   const [verifications, setVerifications] = useState<VerificationDto[]>([]);
   const [attachments, setAttachments] = useState<any[]>([]);
+  const [fieldProblem, setFieldProblem] = useState<FieldProblemDto | null>(null);
   const [activeTab, setActiveTab] = useState('info');
 
   useEffect(() => {
@@ -65,15 +68,17 @@ export default function TicketDetail() {
 
     try {
       setLoading(true);
-      const [ticketData, solutionsData, verificationsData, attachmentsData] = await Promise.all([
+      const [ticketData, solutionsData, verificationsData, attachmentsData, problemData] = await Promise.all([
         ticketService.getTicket(ticketId),
         solutionService.getTicketSolutions(ticketId).catch(() => []),
         verificationService.getVerificationHistory(ticketId).catch(() => []),
         attachmentService.getTicketAttachments(ticketId).catch(() => []),
+        fieldProblemService.getProblemByTicket(ticketId).catch(() => null),
       ]);
 
       setTicket(ticketData);
       setSolutions(solutionsData);
+      setFieldProblem(problemData);
       setVerifications(verificationsData);
       setAttachments(attachmentsData);
     } catch (error) {
@@ -561,6 +566,136 @@ export default function TicketDetail() {
               )}
             </Card>
           </TabPane>
+
+          {/* 知识沉淀 */}
+          {ticket.status === 'Closed' && (
+            <TabPane tab={<span><DatabaseOutlined /> 知识沉淀</span>} key="knowledge">
+              <Card>
+                {fieldProblem ? (
+                  <>
+                    <Alert
+                      message="工单已自动沉淀为问题记录"
+                      description="此工单已关闭并自动转化为现场问题记录，可用于后续分析和知识复用"
+                      type="success"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                    />
+                    <Descriptions column={2} bordered>
+                      <Descriptions.Item label="问题ID" span={2}>
+                        {fieldProblem.problemId}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="项目名称">
+                        {fieldProblem.projectName}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="问题序号">
+                        #{fieldProblem.problemSequence}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="问题分类" span={2}>
+                        {fieldProblem.problemCategory}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="问题描述" span={2}>
+                        {fieldProblem.problemDescription}
+                      </Descriptions.Item>
+                      {fieldProblem.priority && (
+                        <Descriptions.Item label="优先级">
+                          <Tag color={priorityMap[fieldProblem.priority]?.color || 'default'}>
+                            {priorityMap[fieldProblem.priority]?.label || fieldProblem.priority}
+                          </Tag>
+                        </Descriptions.Item>
+                      )}
+                      <Descriptions.Item label="状态">
+                        {fieldProblem.status}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="发现日期">
+                        {new Date(fieldProblem.foundDate).toLocaleDateString()}
+                      </Descriptions.Item>
+                      {fieldProblem.completedDate && (
+                        <Descriptions.Item label="完成日期">
+                          {new Date(fieldProblem.completedDate).toLocaleDateString()}
+                        </Descriptions.Item>
+                      )}
+                      {fieldProblem.processingDays !== null && (
+                        <Descriptions.Item label="处理周期" span={2}>
+                          {fieldProblem.processingDays} 天
+                        </Descriptions.Item>
+                      )}
+                      <Descriptions.Item label="主负责部门">
+                        {fieldProblem.primaryDepartment}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="主负责人">
+                        {fieldProblem.primaryResponsible}
+                      </Descriptions.Item>
+                      {fieldProblem.collaboratingDepartment && (
+                        <Descriptions.Item label="协作部门">
+                          {fieldProblem.collaboratingDepartment}
+                        </Descriptions.Item>
+                      )}
+                      {fieldProblem.collaboratingPerson && (
+                        <Descriptions.Item label="协作人员">
+                          {fieldProblem.collaboratingPerson}
+                        </Descriptions.Item>
+                      )}
+                      {fieldProblem.solution && (
+                        <Descriptions.Item label="处理方案" span={2}>
+                          {fieldProblem.solution}
+                        </Descriptions.Item>
+                      )}
+                      {fieldProblem.solutionDetails && (
+                        <Descriptions.Item label="处理详情" span={2}>
+                          {fieldProblem.solutionDetails}
+                        </Descriptions.Item>
+                      )}
+                      <Descriptions.Item label="是否重复问题">
+                        {fieldProblem.isRepeatProblem ? (
+                          <Tag color="warning">是</Tag>
+                        ) : (
+                          <Tag color="success">否</Tag>
+                        )}
+                      </Descriptions.Item>
+                      {fieldProblem.relatedHistoryProblemId && (
+                        <Descriptions.Item label="关联历史问题">
+                          {fieldProblem.relatedHistoryProblemId}
+                        </Descriptions.Item>
+                      )}
+                      {fieldProblem.verificationStatus && (
+                        <Descriptions.Item label="验证状态">
+                          {fieldProblem.verificationStatus}
+                        </Descriptions.Item>
+                      )}
+                      {fieldProblem.satisfactionScore !== null && (
+                        <Descriptions.Item label="满意度评分">
+                          {fieldProblem.satisfactionScore} / 5
+                        </Descriptions.Item>
+                      )}
+                      {fieldProblem.customerFeedback && (
+                        <Descriptions.Item label="客户反馈" span={2}>
+                          {fieldProblem.customerFeedback}
+                        </Descriptions.Item>
+                      )}
+                      {fieldProblem.notes && (
+                        <Descriptions.Item label="备注" span={2}>
+                          {fieldProblem.notes}
+                        </Descriptions.Item>
+                      )}
+                      <Descriptions.Item label="创建时间">
+                        {new Date(fieldProblem.createdAt).toLocaleString()}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="更新时间">
+                        {new Date(fieldProblem.updatedAt).toLocaleString()}
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </>
+                ) : (
+                  <Alert
+                    message="问题记录生成中"
+                    description="此工单已关闭，系统正在自动生成问题记录，请稍后刷新查看"
+                    type="info"
+                    showIcon
+                  />
+                )}
+              </Card>
+            </TabPane>
+          )}
 
           {/* 问诊式补全 */}
           {ticket.status === 'Draft' && (

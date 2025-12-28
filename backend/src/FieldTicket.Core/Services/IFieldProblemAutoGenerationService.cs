@@ -39,4 +39,11 @@ public interface IFieldProblemAutoGenerationService
     /// <param name="days">统计最近N天（默认90天）</param>
     /// <returns>热点问题列表</returns>
     Task<List<ProblemHotspotDto>> GetHotspotsAsync(Guid? projectId = null, int topN = 10, int days = 90);
+
+    /// <summary>
+    /// 根据工单ID获取关联的问题记录
+    /// </summary>
+    /// <param name="ticketId">工单ID</param>
+    /// <returns>问题记录DTO，如果不存在则返回null</returns>
+    Task<FieldProblemDto?> GetProblemByTicketIdAsync(Guid ticketId);
 }

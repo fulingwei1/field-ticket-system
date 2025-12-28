@@ -407,4 +407,45 @@ public class FieldProblemAutoGenerationService : IFieldProblemAutoGenerationServ
     }
 
     #endregion
+
+    /// <summary>
+    /// 根据工单ID获取关联的问题记录
+    /// </summary>
+    public async Task<FieldProblemDto?> GetProblemByTicketIdAsync(Guid ticketId)
+    {
+        var fieldProblem = await _dbContext.Set<FieldProblem>()
+            .Include(p => p.Project)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.RelatedTicketId == ticketId);
+
+        if (fieldProblem == null)
+        {
+            return null;
+        }
+
+        // 转换为DTO
+        return new FieldProblemDto
+        {
+            ProblemId = fieldProblem.ProblemId,
+            ProjectId = fieldProblem.ProjectId,
+            ProjectName = fieldProblem.Project?.ProjectName ?? "未知项目",
+            ProblemSequence = fieldProblem.ProblemSequence,
+            ProblemCategory = fieldProblem.ProblemCategory,
+            ProblemDescription = fieldProblem.ProblemDescription,
+            Priority = fieldProblem.Priority,
+            FoundDate = fieldProblem.FoundDate,
+            CompletedDate = fieldProblem.CompletedDate,
+            ProcessingDays = fieldProblem.ProcessingDays,
+            PrimaryDepartment = fieldProblem.PrimaryDepartment,
+            PrimaryResponsible = fieldProblem.PrimaryResponsible,
+            Status = fieldProblem.Status,
+            Solution = fieldProblem.Solution,
+            IsRepeatProblem = fieldProblem.IsRepeatProblem,
+            RelatedHistoryProblemId = fieldProblem.RelatedHistoryProblemId,
+            RelatedTicketId = fieldProblem.RelatedTicketId,
+            RelatedTicketNo = fieldProblem.RelatedTicketNo,
+            CreatedAt = fieldProblem.CreatedAt,
+            UpdatedAt = fieldProblem.UpdatedAt
+        };
+    }
 }
