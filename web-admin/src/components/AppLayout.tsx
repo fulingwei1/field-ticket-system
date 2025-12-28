@@ -21,6 +21,7 @@ import {
   UserAddOutlined,
   EditOutlined,
   HistoryOutlined,
+  FireOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService, UserInfo } from '../services/authService';
@@ -134,6 +135,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       key: '/statistics',
       icon: <BarChartOutlined />,
       label: '统计分析',
+      children: [
+        {
+          key: '/statistics',
+          label: '统计面板',
+        },
+        {
+          key: '/analytics/problem-hotspots',
+          icon: <FireOutlined />,
+          label: '问题热点分析',
+        },
+      ],
     },
     {
       key: '/corrective-actions',

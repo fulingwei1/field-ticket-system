@@ -39,6 +39,7 @@ import ProblemStatistics from './pages/projects/ProblemStatistics';
 import UserProfile from './pages/user-profile/UserProfile';
 import ThresholdManagement from './pages/thresholds/ThresholdManagement';
 import CustomerList from './pages/customers/CustomerList';
+import ProblemHotspots from './pages/analytics/ProblemHotspots';
 import UserManagement from './pages/users/UserManagement';
 import EmployeeImport from './pages/users/EmployeeImport';
 import EmployeeUpdate from './pages/users/EmployeeUpdate';
@@ -161,7 +162,10 @@ export default function AppRoutes() {
               
               {/* 统计分析 */}
               <Route path="/statistics" element={<StatisticsDashboard />} />
-              
+
+              {/* 问题热点分析 */}
+              <Route path="/analytics/problem-hotspots" element={<EngineerRoute><ProblemHotspots /></EngineerRoute>} />
+
               {/* 项目导入 - 仅管理员 */}
               <Route path="/projects/excel-import" element={<AdminRoute><ExcelImport /></AdminRoute>} />
 
