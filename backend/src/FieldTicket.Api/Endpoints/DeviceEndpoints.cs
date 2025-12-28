@@ -35,12 +35,13 @@ public static class DeviceEndpoints
     /// </summary>
     private static async Task<IResult> GetDevices(
         IDeviceService service = null!,
+        [FromQuery] Guid? projectId = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
         try
         {
-            var devices = await service.GetDevicesAsync(page, pageSize);
+            var devices = await service.GetDevicesAsync(page, pageSize, projectId);
             return Results.Ok(devices);
         }
         catch (Exception ex)
@@ -77,12 +78,13 @@ public static class DeviceEndpoints
     private static async Task<IResult> SearchDevices(
         [FromQuery] string keyword,
         IDeviceService service = null!,
+        [FromQuery] Guid? projectId = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
         try
         {
-            var devices = await service.SearchDevicesAsync(keyword, page, pageSize);
+            var devices = await service.SearchDevicesAsync(keyword, page, pageSize, projectId);
             return Results.Ok(devices);
         }
         catch (Exception ex)

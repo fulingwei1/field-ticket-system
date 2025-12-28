@@ -1,5 +1,6 @@
 using FieldTicket.Core.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace FieldTicket.Api.Endpoints;
 
@@ -106,6 +107,9 @@ public class ContinueConversationRequest
     public string UserAnswer { get; set; } = string.Empty;
     public string QuestionId { get; set; } = string.Empty;
 }
+
+
+
 
 
 

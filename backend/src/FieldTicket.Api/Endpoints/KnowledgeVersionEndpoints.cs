@@ -28,7 +28,7 @@ public static class KnowledgeVersionEndpoints
 
         // 版本对比
         app.MapGet("/api/knowledge/versions/{versionId1}/compare/{versionId2}", CompareVersions)
-            .WithName("CompareVersions")
+            .WithName("CompareKnowledgeVersions")
             .WithSummary("版本对比")
             .WithTags("KnowledgeVersion")
             .RequireAuthorization();

@@ -33,7 +33,7 @@ public static class JudgementCardVersionEndpoints
 
         // 版本对比
         group.MapGet("/compare", CompareVersions)
-            .WithName("CompareVersions")
+            .WithName("CompareJudgementCardVersions")
             .WithSummary("对比两个版本");
 
         // 获取使用历史

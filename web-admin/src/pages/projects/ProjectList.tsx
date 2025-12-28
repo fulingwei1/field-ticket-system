@@ -22,7 +22,7 @@ import {
   ReloadOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
-import { projectService, ProjectDto, ProjectDetailDto, FieldProblemDto } from '../../services/projectService';
+import { projectService, ProjectDto, ProjectDetailDto, FieldProblemDto, ProjectRelatedPersonDto } from '../../services/projectService';
 import { useNavigate } from 'react-router-dom';
 import dayjs, { Dayjs } from 'dayjs';
 
@@ -353,12 +353,77 @@ export default function ProjectList() {
                 size="small"
               />
             </TabPane>
+            <TabPane tab={`相关人员 (${selectedProject.relatedPersons?.length || 0})`} key="persons">
+              <Table
+                columns={[
+                  { 
+                    title: '姓名', 
+                    dataIndex: 'userName', 
+                    key: 'userName', 
+                    width: 120,
+                    render: (text: string, record: ProjectRelatedPersonDto) => (
+                      <Space>
+                        <Text strong>{text}</Text>
+                        {record.role && (
+                          <Tag color="blue" size="small">{record.role}</Tag>
+                        )}
+                      </Space>
+                    )
+                  },
+                  { 
+                    title: '部门', 
+                    dataIndex: 'department', 
+                    key: 'department', 
+                    width: 120 
+                  },
+                  { 
+                    title: '联系方式', 
+                    dataIndex: 'mobile', 
+                    key: 'mobile', 
+                    width: 120 
+                  },
+                  { 
+                    title: '项目角色', 
+                    dataIndex: 'rolesInProject', 
+                    key: 'rolesInProject', 
+                    render: (roles: string[]) => (
+                      <Space wrap>
+                        {roles.map((role, index) => (
+                          <Tag key={index} color="geekblue">{role}</Tag>
+                        ))}
+                      </Space>
+                    )
+                  },
+                  { 
+                    title: '工单数量', 
+                    dataIndex: 'ticketCount', 
+                    key: 'ticketCount', 
+                    width: 100,
+                    align: 'right'
+                  },
+                  { 
+                    title: '最后活动', 
+                    dataIndex: 'lastActivityAt', 
+                    key: 'lastActivityAt', 
+                    width: 150,
+                    render: (date: string) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
+                  },
+                ]}
+                dataSource={selectedProject.relatedPersons || []}
+                rowKey="userId"
+                pagination={false}
+                size="small"
+                locale={{ emptyText: '暂无相关人员' }}
+              />
+            </TabPane>
           </Tabs>
         ) : null}
       </Modal>
     </div>
   );
 }
+
+
 
 
 

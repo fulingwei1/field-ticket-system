@@ -13,6 +13,9 @@ RUN npm ci
 COPY . .
 
 # Build the application
+# Vite environment variables must be set at build time
+ARG VITE_API_URL=http://localhost:5001
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Production stage

@@ -206,15 +206,15 @@ public static class AiAnalysisEndpoints
 
         // 获取分析结果列表
         group.MapGet("/results", async (
+            HttpContext context,
+            IAiAnalysisService aiAnalysisService,
             [FromQuery] string? analysisType,
             [FromQuery] Guid? engineerId,
             [FromQuery] Guid? departmentId,
             [FromQuery] DateOnly? analysisDateFrom,
             [FromQuery] DateOnly? analysisDateTo,
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20,
-            HttpContext context,
-            IAiAnalysisService aiAnalysisService) =>
+            [FromQuery] int pageSize = 20) =>
         {
             var userId = GetUserId(context);
             if (userId == null)
@@ -304,5 +304,4 @@ public static class AiAnalysisEndpoints
         return await dbContext.Users.FindAsync(userId);
     }
 }
-
 

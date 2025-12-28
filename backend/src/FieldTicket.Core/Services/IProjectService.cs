@@ -34,7 +34,14 @@ public interface IProjectService
     /// 获取问题统计
     /// </summary>
     Task<ProblemStatisticsDto> GetProblemStatisticsAsync(ProblemStatisticsFilter filter);
+
+    /// <summary>
+    /// 获取项目相关人员
+    /// </summary>
+    Task<List<ProjectRelatedPersonDto>> GetProjectRelatedPersonsAsync(Guid projectId);
 }
+
+
 
 
 

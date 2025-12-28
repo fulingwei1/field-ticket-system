@@ -4,6 +4,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export interface CreateTicketRequest {
   localDraftId?: string;
+  customerId?: string;
+  projectId?: string;
   deviceId: string;
   stationId?: string;
   domain: string; // A/B/C/D/E

@@ -41,6 +41,11 @@ public class ProjectService : IProjectService
             query = query.Where(p => p.ProjectName.Contains(filter.ProjectName));
         }
 
+        if (filter.CustomerId.HasValue)
+        {
+            query = query.Where(p => p.CustomerId == filter.CustomerId.Value);
+        }
+
         if (!string.IsNullOrEmpty(filter.CustomerName))
         {
             query = query.Where(p => p.CustomerName != null && p.CustomerName.Contains(filter.CustomerName));
@@ -123,6 +128,8 @@ public class ProjectService : IProjectService
             .Select(p => MapToProblemDto(p, project))
             .ToList();
 
+        var relatedPersons = await GetProjectRelatedPersonsAsync(projectId);
+
         return new ProjectDetailDto
         {
             ProjectId = project.ProjectId,
@@ -143,7 +150,8 @@ public class ProjectService : IProjectService
             ProblemCount = project.Problems.Count,
             CreatedAt = project.CreatedAt,
             UpdatedAt = project.UpdatedAt,
-            Problems = problems
+            Problems = problems,
+            RelatedPersons = relatedPersons
         };
     }
 
@@ -338,6 +346,320 @@ public class ProjectService : IProjectService
         return statistics;
     }
 
+    public async Task<List<ProjectRelatedPersonDto>> GetProjectRelatedPersonsAsync(Guid projectId)
+    {
+        var persons = new Dictionary<Guid, ProjectRelatedPersonDto>();
+
+        // 1. 项目经理
+        var project = await _dbContext.Projects
+            .FirstOrDefaultAsync(p => p.ProjectId == projectId);
+        
+        if (project != null && project.ProjectManagerId.HasValue)
+        {
+            var pm = await _dbContext.Users
+                .FirstOrDefaultAsync(u => u.Id == project.ProjectManagerId.Value);
+            
+            if (pm != null)
+            {
+                persons[pm.Id] = new ProjectRelatedPersonDto
+                {
+                    UserId = pm.Id,
+                    UserName = pm.Name,
+                    Role = pm.Role,
+                    Department = pm.DeptId,
+                    Mobile = pm.Mobile,
+                    RolesInProject = new List<string> { "项目经理" },
+                    TicketCount = 0,
+                    LastActivityAt = null
+                };
+            }
+        }
+
+        // 2. 创建工单的工程师
+        var ticketCreators = await _dbContext.Tickets
+            .Where(t => t.ProjectId == projectId)
+            .GroupBy(t => t.CreatedByUserId)
+            .Select(g => new { UserId = g.Key, Count = g.Count(), LastActivity = g.Max(t => t.CreatedAt) })
+            .ToListAsync();
+
+        foreach (var creator in ticketCreators)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == creator.UserId);
+            if (user != null)
+            {
+                if (persons.ContainsKey(user.Id))
+                {
+                    persons[user.Id].RolesInProject.Add("创建工单");
+                    persons[user.Id].TicketCount += creator.Count;
+                    if (creator.LastActivity > (persons[user.Id].LastActivityAt ?? DateTime.MinValue))
+                    {
+                        persons[user.Id].LastActivityAt = creator.LastActivity;
+                    }
+                }
+                else
+                {
+                    persons[user.Id] = new ProjectRelatedPersonDto
+                    {
+                        UserId = user.Id,
+                        UserName = user.Name,
+                        Role = user.Role,
+                        Department = user.DeptId,
+                        Mobile = user.Mobile,
+                        RolesInProject = new List<string> { "创建工单" },
+                        TicketCount = creator.Count,
+                        LastActivityAt = creator.LastActivity
+                    };
+                }
+            }
+        }
+
+        // 3. 分诊人员
+        var triagePersons = await _dbContext.TriageNotes
+            .Where(tn => _dbContext.Tickets.Any(t => t.TicketId == tn.TicketId && t.ProjectId == projectId))
+            .GroupBy(tn => tn.CreatedBy)
+            .Select(g => new { UserId = g.Key, Count = g.Count(), LastActivity = g.Max(tn => tn.CreatedAt) })
+            .ToListAsync();
+
+        foreach (var triage in triagePersons)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == triage.UserId);
+            if (user != null)
+            {
+                if (persons.ContainsKey(user.Id))
+                {
+                    if (!persons[user.Id].RolesInProject.Contains("分诊"))
+                    {
+                        persons[user.Id].RolesInProject.Add("分诊");
+                    }
+                    persons[user.Id].TicketCount += triage.Count;
+                    if (triage.LastActivity > (persons[user.Id].LastActivityAt ?? DateTime.MinValue))
+                    {
+                        persons[user.Id].LastActivityAt = triage.LastActivity;
+                    }
+                }
+                else
+                {
+                    persons[user.Id] = new ProjectRelatedPersonDto
+                    {
+                        UserId = user.Id,
+                        UserName = user.Name,
+                        Role = user.Role,
+                        Department = user.DeptId,
+                        Mobile = user.Mobile,
+                        RolesInProject = new List<string> { "分诊" },
+                        TicketCount = triage.Count,
+                        LastActivityAt = triage.LastActivity
+                    };
+                }
+            }
+        }
+
+        // 4. 分配处理工单的人员
+        var assignedPersons = await _dbContext.Tickets
+            .Where(t => t.ProjectId == projectId && t.AssignedTo.HasValue)
+            .GroupBy(t => t.AssignedTo!.Value)
+            .Select(g => new { UserId = g.Key, Count = g.Count(), LastActivity = g.Max(t => t.UpdatedAt) })
+            .ToListAsync();
+
+        foreach (var assigned in assignedPersons)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == assigned.UserId);
+            if (user != null)
+            {
+                if (persons.ContainsKey(user.Id))
+                {
+                    if (!persons[user.Id].RolesInProject.Contains("处理工单"))
+                    {
+                        persons[user.Id].RolesInProject.Add("处理工单");
+                    }
+                    if (assigned.LastActivity > (persons[user.Id].LastActivityAt ?? DateTime.MinValue))
+                    {
+                        persons[user.Id].LastActivityAt = assigned.LastActivity;
+                    }
+                }
+                else
+                {
+                    persons[user.Id] = new ProjectRelatedPersonDto
+                    {
+                        UserId = user.Id,
+                        UserName = user.Name,
+                        Role = user.Role,
+                        Department = user.DeptId,
+                        Mobile = user.Mobile,
+                        RolesInProject = new List<string> { "处理工单" },
+                        TicketCount = assigned.Count,
+                        LastActivityAt = assigned.LastActivity
+                    };
+                }
+            }
+        }
+
+        // 5. 提供解决方案的人员
+        var solutionCreators = await _dbContext.Solutions
+            .Where(s => _dbContext.Tickets.Any(t => t.TicketId == s.TicketId && t.ProjectId == projectId))
+            .GroupBy(s => s.CreatedBy)
+            .Select(g => new { UserId = g.Key, Count = g.Count(), LastActivity = g.Max(s => s.CreatedAt) })
+            .ToListAsync();
+
+        foreach (var solution in solutionCreators)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == solution.UserId);
+            if (user != null)
+            {
+                if (persons.ContainsKey(user.Id))
+                {
+                    if (!persons[user.Id].RolesInProject.Contains("解决方案"))
+                    {
+                        persons[user.Id].RolesInProject.Add("解决方案");
+                    }
+                    if (solution.LastActivity > (persons[user.Id].LastActivityAt ?? DateTime.MinValue))
+                    {
+                        persons[user.Id].LastActivityAt = solution.LastActivity;
+                    }
+                }
+                else
+                {
+                    persons[user.Id] = new ProjectRelatedPersonDto
+                    {
+                        UserId = user.Id,
+                        UserName = user.Name,
+                        Role = user.Role,
+                        Department = user.DeptId,
+                        Mobile = user.Mobile,
+                        RolesInProject = new List<string> { "解决方案" },
+                        TicketCount = solution.Count,
+                        LastActivityAt = solution.LastActivity
+                    };
+                }
+            }
+        }
+
+        // 6. 验证人员
+        var verifiers = await _dbContext.Verifications
+            .Where(v => _dbContext.Tickets.Any(t => t.TicketId == v.TicketId && t.ProjectId == projectId))
+            .GroupBy(v => v.ExecutedBy)
+            .Select(g => new { UserId = g.Key, Count = g.Count(), LastActivity = g.Max(v => v.VerifiedAt) })
+            .ToListAsync();
+
+        foreach (var verifier in verifiers)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == verifier.UserId);
+            if (user != null)
+            {
+                if (persons.ContainsKey(user.Id))
+                {
+                    if (!persons[user.Id].RolesInProject.Contains("验证"))
+                    {
+                        persons[user.Id].RolesInProject.Add("验证");
+                    }
+                    if (verifier.LastActivity > (persons[user.Id].LastActivityAt ?? DateTime.MinValue))
+                    {
+                        persons[user.Id].LastActivityAt = verifier.LastActivity;
+                    }
+                }
+                else
+                {
+                    persons[user.Id] = new ProjectRelatedPersonDto
+                    {
+                        UserId = user.Id,
+                        UserName = user.Name,
+                        Role = user.Role,
+                        Department = user.DeptId,
+                        Mobile = user.Mobile,
+                        RolesInProject = new List<string> { "验证" },
+                        TicketCount = verifier.Count,
+                        LastActivityAt = verifier.LastActivity
+                    };
+                }
+            }
+        }
+
+        // 7. 责任归属人员
+        var attributedPersons = await _dbContext.Tickets
+            .Where(t => t.ProjectId == projectId && t.AttributedBy.HasValue)
+            .GroupBy(t => t.AttributedBy!.Value)
+            .Select(g => new { UserId = g.Key, Count = g.Count(), LastActivity = g.Max(t => t.AttributedAt!.Value) })
+            .ToListAsync();
+
+        foreach (var attributed in attributedPersons)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == attributed.UserId);
+            if (user != null)
+            {
+                if (persons.ContainsKey(user.Id))
+                {
+                    if (!persons[user.Id].RolesInProject.Contains("责任归属"))
+                    {
+                        persons[user.Id].RolesInProject.Add("责任归属");
+                    }
+                    if (attributed.LastActivity > (persons[user.Id].LastActivityAt ?? DateTime.MinValue))
+                    {
+                        persons[user.Id].LastActivityAt = attributed.LastActivity;
+                    }
+                }
+                else
+                {
+                    persons[user.Id] = new ProjectRelatedPersonDto
+                    {
+                        UserId = user.Id,
+                        UserName = user.Name,
+                        Role = user.Role,
+                        Department = user.DeptId,
+                        Mobile = user.Mobile,
+                        RolesInProject = new List<string> { "责任归属" },
+                        TicketCount = attributed.Count,
+                        LastActivityAt = attributed.LastActivity
+                    };
+                }
+            }
+        }
+
+        // 8. 合并工单的人员
+        var mergedPersons = await _dbContext.Tickets
+            .Where(t => t.ProjectId == projectId && t.MergedBy.HasValue)
+            .GroupBy(t => t.MergedBy!.Value)
+            .Select(g => new { UserId = g.Key, Count = g.Count(), LastActivity = g.Max(t => t.MergedAt!.Value) })
+            .ToListAsync();
+
+        foreach (var merged in mergedPersons)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == merged.UserId);
+            if (user != null)
+            {
+                if (persons.ContainsKey(user.Id))
+                {
+                    if (!persons[user.Id].RolesInProject.Contains("合并工单"))
+                    {
+                        persons[user.Id].RolesInProject.Add("合并工单");
+                    }
+                    if (merged.LastActivity > (persons[user.Id].LastActivityAt ?? DateTime.MinValue))
+                    {
+                        persons[user.Id].LastActivityAt = merged.LastActivity;
+                    }
+                }
+                else
+                {
+                    persons[user.Id] = new ProjectRelatedPersonDto
+                    {
+                        UserId = user.Id,
+                        UserName = user.Name,
+                        Role = user.Role,
+                        Department = user.DeptId,
+                        Mobile = user.Mobile,
+                        RolesInProject = new List<string> { "合并工单" },
+                        TicketCount = merged.Count,
+                        LastActivityAt = merged.LastActivity
+                    };
+                }
+            }
+        }
+
+        return persons.Values
+            .OrderByDescending(p => p.LastActivityAt ?? DateTime.MinValue)
+            .ThenBy(p => p.UserName)
+            .ToList();
+    }
+
     private FieldProblemDto MapToProblemDto(FieldProblem problem, Project project)
     {
         return new FieldProblemDto
@@ -365,6 +687,8 @@ public class ProjectService : IProjectService
         };
     }
 }
+
+
 
 
 

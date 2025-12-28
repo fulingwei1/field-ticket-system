@@ -12,6 +12,8 @@ public class User
     public string? Mobile { get; set; }
     public string? DeptId { get; set; }
     public string Role { get; set; } = string.Empty;
+    public string? Username { get; set; }
+    public string? PasswordHash { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

@@ -1,4 +1,5 @@
 using FieldTicket.Core.Services;
+using FieldTicket.Domain.Entities;
 using FieldTicket.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,21 +22,32 @@ public class DeviceService : IDeviceService
         _logger = logger;
     }
 
-    public async Task<List<DeviceDto>> GetDevicesAsync(int page = 1, int pageSize = 50)
+    public async Task<List<DeviceDto>> GetDevicesAsync(int page = 1, int pageSize = 50, Guid? projectId = null)
     {
-        // 从工单中提取设备信息
-        var devices = await _dbContext.Tickets
-            .Where(t => !string.IsNullOrEmpty(t.DeviceSn))
-            .GroupBy(t => new { t.DeviceId, t.DeviceSn })
-            .Select(g => new DeviceDto
+        var query = _dbContext.Devices.AsQueryable();
+
+        // 如果指定了项目ID，只查询该项目下的设备
+        if (projectId.HasValue)
+        {
+            query = query.Where(d => d.ProjectId == projectId.Value);
+        }
+
+        var devices = await query
+            .Select(d => new DeviceDto
             {
-                DeviceId = g.Key.DeviceId,
-                DeviceSn = g.Key.DeviceSn ?? string.Empty,
-                DeviceName = g.Key.DeviceSn, // 使用设备SN作为名称
-                TicketCount = g.Count(),
-                LastTicketAt = g.Max(t => t.CreatedAt)
+                DeviceId = d.DeviceId,
+                DeviceSn = d.DeviceSn ?? string.Empty,
+                DeviceName = d.DeviceName,
+                ProjectId = d.ProjectId,
+                TicketCount = _dbContext.Tickets.Count(t => t.DeviceId == d.DeviceId),
+                LastTicketAt = _dbContext.Tickets
+                    .Where(t => t.DeviceId == d.DeviceId)
+                    .OrderByDescending(t => t.CreatedAt)
+                    .Select(t => (DateTime?)t.CreatedAt)
+                    .FirstOrDefault()
             })
-            .OrderByDescending(d => d.LastTicketAt)
+            .OrderByDescending(d => d.LastTicketAt ?? DateTime.MinValue)
+            .ThenBy(d => d.DeviceName)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -45,43 +57,58 @@ public class DeviceService : IDeviceService
 
     public async Task<DeviceDto?> GetDeviceAsync(Guid deviceId)
     {
-        var device = await _dbContext.Tickets
-            .Where(t => t.DeviceId == deviceId)
-            .GroupBy(t => new { t.DeviceId, t.DeviceSn })
-            .Select(g => new DeviceDto
+        var device = await _dbContext.Devices
+            .Where(d => d.DeviceId == deviceId)
+            .Select(d => new DeviceDto
             {
-                DeviceId = g.Key.DeviceId,
-                DeviceSn = g.Key.DeviceSn ?? string.Empty,
-                DeviceName = g.Key.DeviceSn,
-                TicketCount = g.Count(),
-                LastTicketAt = g.Max(t => t.CreatedAt)
+                DeviceId = d.DeviceId,
+                DeviceSn = d.DeviceSn ?? string.Empty,
+                DeviceName = d.DeviceName,
+                ProjectId = d.ProjectId,
+                TicketCount = _dbContext.Tickets.Count(t => t.DeviceId == d.DeviceId),
+                LastTicketAt = _dbContext.Tickets
+                    .Where(t => t.DeviceId == d.DeviceId)
+                    .OrderByDescending(t => t.CreatedAt)
+                    .Select(t => (DateTime?)t.CreatedAt)
+                    .FirstOrDefault()
             })
             .FirstOrDefaultAsync();
 
         return device;
     }
 
-    public async Task<List<DeviceDto>> SearchDevicesAsync(string keyword, int page = 1, int pageSize = 50)
+    public async Task<List<DeviceDto>> SearchDevicesAsync(string keyword, int page = 1, int pageSize = 50, Guid? projectId = null)
     {
-        if (string.IsNullOrWhiteSpace(keyword))
+        var query = _dbContext.Devices.AsQueryable();
+
+        if (projectId.HasValue)
         {
-            return await GetDevicesAsync(page, pageSize);
+            query = query.Where(d => d.ProjectId == projectId.Value);
         }
 
-        var devices = await _dbContext.Tickets
-            .Where(t => !string.IsNullOrEmpty(t.DeviceSn) &&
-                       (t.DeviceSn.Contains(keyword) || 
-                        (t.DeviceName != null && t.DeviceName.Contains(keyword))))
-            .GroupBy(t => new { t.DeviceId, t.DeviceSn })
-            .Select(g => new DeviceDto
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            query = query.Where(d => 
+                (d.DeviceSn != null && d.DeviceSn.Contains(keyword)) ||
+                d.DeviceName.Contains(keyword));
+        }
+
+        var devices = await query
+            .Select(d => new DeviceDto
             {
-                DeviceId = g.Key.DeviceId,
-                DeviceSn = g.Key.DeviceSn ?? string.Empty,
-                DeviceName = g.Key.DeviceSn,
-                TicketCount = g.Count(),
-                LastTicketAt = g.Max(t => t.CreatedAt)
+                DeviceId = d.DeviceId,
+                DeviceSn = d.DeviceSn ?? string.Empty,
+                DeviceName = d.DeviceName,
+                ProjectId = d.ProjectId,
+                TicketCount = _dbContext.Tickets.Count(t => t.DeviceId == d.DeviceId),
+                LastTicketAt = _dbContext.Tickets
+                    .Where(t => t.DeviceId == d.DeviceId)
+                    .OrderByDescending(t => t.CreatedAt)
+                    .Select(t => (DateTime?)t.CreatedAt)
+                    .FirstOrDefault()
             })
-            .OrderByDescending(d => d.LastTicketAt)
+            .OrderByDescending(d => d.LastTicketAt ?? DateTime.MinValue)
+            .ThenBy(d => d.DeviceName)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -89,6 +116,8 @@ public class DeviceService : IDeviceService
         return devices;
     }
 }
+
+
 
 
 

@@ -31,11 +31,11 @@ public static class JudgementCardRecommendationEndpoints
     /// 推荐判断卡
     /// </summary>
     private static async Task<IResult> RecommendJudgementCards(
+        IJudgementCardRecommendationService service,
         [FromQuery] char? domain,
         [FromQuery] string? stepCode,
         [FromQuery] string? symptomTitle,
-        [FromQuery] int topK = 5,
-        IJudgementCardRecommendationService service)
+        [FromQuery] int topK = 5)
     {
         try
         {
@@ -61,8 +61,8 @@ public static class JudgementCardRecommendationEndpoints
     /// </summary>
     private static async Task<IResult> RecommendJudgementCardsByTicket(
         Guid ticketId,
-        [FromQuery] int topK = 5,
-        IJudgementCardRecommendationService service)
+        IJudgementCardRecommendationService service,
+        [FromQuery] int topK = 5)
     {
         try
         {
@@ -79,4 +79,3 @@ public static class JudgementCardRecommendationEndpoints
         }
     }
 }
-

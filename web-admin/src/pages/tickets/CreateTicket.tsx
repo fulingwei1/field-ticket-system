@@ -20,6 +20,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MissingInfoQuestionnaire } from '../../components/tickets/MissingInfoQuestionnaire';
 import { ticketTemplateService } from '../../services/ticketTemplateService';
 import { deviceConfigSnapshotService, ConfigDifference } from '../../services/deviceConfigSnapshotService';
+import { customerService, CustomerDto } from '../../services/customerService';
+import { projectService, ProjectDto } from '../../services/projectService';
+import { deviceService, DeviceDto } from '../../services/deviceService';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -197,7 +200,9 @@ const CreateTicket: React.FC = () => {
     };
 
     return {
-      deviceId: values.deviceId || '', // TODO: 从设备选择获取
+      deviceId: values.deviceId || '',
+      customerId: values.customerId,
+      projectId: values.projectId,
       stationId: values.stationId,
       domain: values.domain,
       stepCode: values.stepCode,
@@ -286,14 +291,141 @@ const BasicInfoForm: React.FC<{ form: any; domain: string; setDomain: (d: string
   domain,
   setDomain,
 }) => {
+  const [customers, setCustomers] = useState<CustomerDto[]>([]);
+  const [projects, setProjects] = useState<ProjectDto[]>([]);
+  const [devices, setDevices] = useState<DeviceDto[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingDevices, setLoadingDevices] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | undefined>();
+  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>();
+
+  // 加载客户列表
+  useEffect(() => {
+    loadCustomers();
+  }, []);
+
+  const loadCustomers = async () => {
+    try {
+      setLoadingCustomers(true);
+      const data = await customerService.getCustomers();
+      setCustomers(data);
+    } catch (error: any) {
+      message.error('加载客户列表失败: ' + (error.message || '未知错误'));
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+
+  // 当客户选择变化时，加载项目列表
+  const handleCustomerChange = async (customerId: string) => {
+    setSelectedCustomerId(customerId);
+    setSelectedProjectId(undefined);
+    setProjects([]);
+    setDevices([]);
+    form.setFieldsValue({ projectId: undefined, deviceId: undefined });
+
+    if (customerId) {
+      try {
+        setLoadingProjects(true);
+        const result = await projectService.getProjects({ customerId }, 1, 100);
+        setProjects(result.items);
+      } catch (error: any) {
+        message.error('加载项目列表失败: ' + (error.message || '未知错误'));
+      } finally {
+        setLoadingProjects(false);
+      }
+    }
+  };
+
+  // 当项目选择变化时，加载设备列表
+  const handleProjectChange = async (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setDevices([]);
+    form.setFieldsValue({ deviceId: undefined });
+
+    if (projectId) {
+      try {
+        setLoadingDevices(true);
+        const data = await deviceService.getDevices(1, 100, projectId);
+        setDevices(data);
+      } catch (error: any) {
+        message.error('加载设备列表失败: ' + (error.message || '未知错误'));
+      } finally {
+        setLoadingDevices(false);
+      }
+    }
+  };
+
   return (
     <>
       <Form.Item
+        name="customerId"
+        label="客户"
+        rules={[{ required: true, message: '请选择客户' }]}
+      >
+        <Select
+          placeholder="请选择客户"
+          loading={loadingCustomers}
+          showSearch
+          filterOption={(input, option) =>
+            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+          }
+          onChange={handleCustomerChange}
+          options={customers.map(c => ({
+            value: c.customerId,
+            label: c.customerName + (c.customerCode ? ` (${c.customerCode})` : ''),
+          }))}
+        />
+      </Form.Item>
+
+      <Form.Item
+        name="projectId"
+        label="项目"
+        rules={[{ required: true, message: '请选择项目' }]}
+      >
+        <Select
+          placeholder="请先选择客户"
+          loading={loadingProjects}
+          disabled={!selectedCustomerId}
+          showSearch
+          filterOption={(input, option) =>
+            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+          }
+          onChange={handleProjectChange}
+          options={projects.map(p => ({
+            value: p.projectId,
+            label: `${p.projectName} (${p.projectNo})`,
+          }))}
+        />
+      </Form.Item>
+
+      <Form.Item
         name="deviceId"
-        label="设备ID"
+        label="设备"
         rules={[{ required: true, message: '请选择设备' }]}
       >
-        <Input placeholder="请输入或选择设备" />
+        <Select
+          placeholder={selectedProjectId ? "请选择设备" : "请先选择项目"}
+          loading={loadingDevices}
+          disabled={!selectedProjectId}
+          showSearch
+          allowClear
+          filterOption={(input, option) =>
+            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+          }
+          notFoundContent={
+            selectedProjectId && devices.length === 0 ? (
+              <div style={{ padding: '8px', textAlign: 'center', color: '#999' }}>
+                该项目下暂无设备，可手动输入设备ID
+              </div>
+            ) : null
+          }
+          options={devices.map(d => ({
+            value: d.deviceId,
+            label: `${d.deviceName || d.deviceSn} (${d.deviceSn})`,
+          }))}
+        />
       </Form.Item>
 
       <Form.Item

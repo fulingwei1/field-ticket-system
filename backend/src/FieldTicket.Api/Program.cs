@@ -151,6 +151,8 @@ builder.Services.AddScoped<IKPIAnomalyService, FieldTicket.Infrastructure.Servic
 builder.Services.AddScoped<IExcelImportService, FieldTicket.Infrastructure.Services.ExcelImportService>();
 builder.Services.AddScoped<IRootCauseAnalysisService, FieldTicket.Infrastructure.Services.RootCauseAnalysisService>();
 builder.Services.AddScoped<IProjectService, FieldTicket.Infrastructure.Services.ProjectService>();
+builder.Services.AddScoped<ICustomerService, FieldTicket.Infrastructure.Services.CustomerService>();
+builder.Services.AddScoped<IUserManagementService, FieldTicket.Infrastructure.Services.UserManagementService>();
 
 // 配置角色映射
 var roleMappingConfig = FieldTicket.Infrastructure.WeCom.RoleMappingConfig.LoadFromConfiguration(builder.Configuration);
@@ -233,6 +235,8 @@ app.MapMissingInfoConversationEndpoints();
 app.MapExcelImportEndpoints();
 app.MapRootCauseAnalysisEndpoints();
 app.MapProjectEndpoints();
+app.MapCustomerEndpoints();
+app.MapUserManagementEndpoints();
 app.MapFactTableEndpoints();
 
 // Health check
@@ -242,3 +246,5 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
 
 app.Run();
 
+// 供集成测试使用的入口暴露
+public partial class Program { }

@@ -61,8 +61,43 @@ public class TicketService : ITicketService
             }
         }
 
-        // 从同一设备的其他工单中获取 CustomerId 和 ProjectId
-        var (customerId, projectId) = await GetCustomerAndProjectFromDeviceAsync(request.DeviceId);
+        // 优先使用请求中的 CustomerId 和 ProjectId，如果没有则从设备中获取
+        Guid customerId;
+        Guid projectId;
+        
+        if (request.CustomerId.HasValue && request.ProjectId.HasValue)
+        {
+            customerId = request.CustomerId.Value;
+            projectId = request.ProjectId.Value;
+        }
+        else
+        {
+            // 从同一设备的其他工单中获取 CustomerId 和 ProjectId
+            var (customerIdFromDevice, projectIdFromDevice) = await GetCustomerAndProjectFromDeviceAsync(request.DeviceId);
+            customerId = customerIdFromDevice;
+            projectId = projectIdFromDevice;
+        }
+
+        // 如果仍然没有，尝试从设备表中获取
+        if (customerId == Guid.Empty || projectId == Guid.Empty)
+        {
+            var device = await _dbContext.Devices
+                .FirstOrDefaultAsync(d => d.DeviceId == request.DeviceId);
+            
+            if (device != null && device.ProjectId.HasValue)
+            {
+                projectId = device.ProjectId.Value;
+                
+                // 从项目表中获取客户ID
+                var project = await _dbContext.Projects
+                    .FirstOrDefaultAsync(p => p.ProjectId == projectId);
+                
+                if (project != null)
+                {
+                    customerId = project.CustomerId;
+                }
+            }
+        }
 
         // 生成工单编号（草稿时先不生成，提交时生成）
         var ticket = new Ticket
@@ -389,12 +424,17 @@ public class TicketService : ITicketService
         var userIds = tickets.Select(t => t.CreatedByUserId).Distinct().ToList();
 
         // 查询 Projects（用于获取 CustomerName）
-        var projects = await _dbContext.Projects
-            .Where(p => projectIds.Contains(p.ProjectId))
-            .Select(p => new { p.ProjectId, p.CustomerName })
-            .ToListAsync();
+        var projects = new List<(Guid ProjectId, string CustomerName)>();
+        if (projectIds.Any())
+        {
+            var projectsData = await _dbContext.Projects
+                .Where(p => projectIds.Contains(p.ProjectId))
+                .Select(p => new { p.ProjectId, p.CustomerName })
+                .ToListAsync();
+            projects = projectsData.Select(p => (p.ProjectId, p.CustomerName ?? string.Empty)).ToList();
+        }
 
-        var projectDict = projects.ToDictionary(p => p.ProjectId, p => p.CustomerName ?? string.Empty);
+        var projectDict = projects.ToDictionary(p => p.ProjectId, p => p.CustomerName);
 
         // 查询 Users（用于获取 CreatedByName）
         var users = await _dbContext.Users
@@ -426,9 +466,7 @@ public class TicketService : ITicketService
         {
             TicketId = t.TicketId,
             TicketNo = t.TicketNo,
-            CustomerName = !string.IsNullOrEmpty(t.CustomerName)
-                ? t.CustomerName
-                : (projectDict.TryGetValue(t.ProjectId, out var projectCustomerName) ? projectCustomerName : string.Empty),
+            CustomerName = projectDict.TryGetValue(t.ProjectId, out var projectCustomerName) ? projectCustomerName : string.Empty,
             DeviceSn = !string.IsNullOrEmpty(t.DeviceSn)
                 ? t.DeviceSn
                 : (deviceSnDict.TryGetValue(t.DeviceId, out var deviceSn) ? deviceSn : string.Empty),

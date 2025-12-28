@@ -137,6 +137,39 @@ public static class AuthEndpoints
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status500InternalServerError);
+
+        // 账号密码登录
+        group.MapPost("/login", async (
+            [FromBody] PasswordLoginRequest request,
+            IAuthService authService) =>
+        {
+            try
+            {
+                var result = await authService.LoginWithPasswordAsync(request.Username, request.Password);
+                return Results.Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Json(new { message = ex.Message }, statusCode: StatusCodes.Status401Unauthorized);
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+        })
+        .WithName("PasswordLogin")
+        .WithSummary("账号密码登录")
+        .Produces<AuthResult>()
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status500InternalServerError);
     }
 
     private static string? ExtractTokenFromHeader(HttpContext context)
@@ -174,6 +207,15 @@ public class RefreshTokenRequest
 public class WeComMiniProgramLoginRequest
 {
     public string Code { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// 账号密码登录请求
+/// </summary>
+public class PasswordLoginRequest
+{
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
 }
 
 

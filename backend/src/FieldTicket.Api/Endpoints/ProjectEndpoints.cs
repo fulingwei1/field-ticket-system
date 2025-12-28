@@ -20,14 +20,15 @@ public static class ProjectEndpoints
         group.MapGet("", async (
             [FromQuery] string? projectNo,
             [FromQuery] string? projectName,
+            [FromQuery] Guid? customerId,
             [FromQuery] string? customerName,
             [FromQuery] string? deviceType,
             [FromQuery] string? projectStatus,
             [FromQuery] DateTime? orderDateFrom,
             [FromQuery] DateTime? orderDateTo,
+            IProjectService projectService,
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20,
-            IProjectService projectService) =>
+            [FromQuery] int pageSize = 20) =>
         {
             try
             {
@@ -35,6 +36,7 @@ public static class ProjectEndpoints
                 {
                     ProjectNo = projectNo,
                     ProjectName = projectName,
+                    CustomerId = customerId,
                     CustomerName = customerName,
                     DeviceType = deviceType,
                     ProjectStatus = projectStatus,
@@ -147,8 +149,27 @@ public static class ProjectEndpoints
         })
         .WithName("GetProblemStatistics")
         .WithSummary("获取问题统计");
+
+        // 获取项目相关人员
+        group.MapGet("/{projectId:guid}/related-persons", async (
+            Guid projectId,
+            IProjectService projectService) =>
+        {
+            try
+            {
+                var persons = await projectService.GetProjectRelatedPersonsAsync(projectId);
+                return Results.Ok(persons);
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: 500);
+            }
+        })
+        .WithName("GetProjectRelatedPersons")
+        .WithSummary("获取项目相关人员");
     }
 }
+
 
 
 

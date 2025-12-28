@@ -1,7 +1,11 @@
 using FieldTicket.Core.Services;
+using FieldTicket.Domain.Entities;
+using FieldTicket.Infrastructure.Data;
 using FieldTicket.Infrastructure.Services;
 using FieldTicket.Shared.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
 namespace FieldTicket.Api.Endpoints;
@@ -182,7 +186,7 @@ public static class TicketEndpoints
 
         // 获取工单列表
         group.MapGet("", async (
-            [FromQuery] List<string>? status,
+            [FromQuery] string[]? status,
             [FromQuery] Guid? customerId,
             [FromQuery] string? deviceSn,
             [FromQuery] char? domain,
@@ -196,21 +200,48 @@ public static class TicketEndpoints
             [FromQuery] int pageSize = 20) =>
         {
             var userId = GetUserId(context);
+            var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger("TicketEndpoints");
             
-            // 如果是 FieldEngineer，只能看自己创建的工单
+            // 权限逻辑：只有 FieldEngineer 才默认只看自己创建的工单
+            // 管理员和其他角色可以看到所有工单（除非明确指定 createdBy）
+            Guid? filterCreatedBy = createdBy;
+            if (!createdBy.HasValue && userId.HasValue)
+            {
+                var user = await GetCurrentUserAsync(context, userId.Value);
+                logger.LogInformation("GetTickets - UserId: {UserId}, UserRole: {Role}, Username: {Username}", 
+                    userId.Value, user?.Role ?? "null", user?.Username ?? "null");
+                
+                // 只有 FieldEngineer 才默认只看自己的工单
+                if (user != null && user.Role == "FieldEngineer")
+                {
+                    filterCreatedBy = userId;
+                    logger.LogInformation("GetTickets - Filtering by FieldEngineer's own tickets: {UserId}", userId.Value);
+                }
+                else
+                {
+                    logger.LogInformation("GetTickets - User is not FieldEngineer, showing all tickets. Role: {Role}", user?.Role ?? "null");
+                }
+                // 管理员和其他角色不设置 CreatedBy 过滤，可以看到所有工单
+                // filterCreatedBy 保持为 null，表示不过滤创建人
+            }
+
             var filter = new TicketQueryFilter
             {
-                Statuses = status,
+                Statuses = status?.ToList(),
                 CustomerId = customerId,
                 DeviceSn = deviceSn,
                 Domain = domain,
                 Priority = priority,
-                CreatedBy = createdBy ?? userId, // 默认只看自己的
+                CreatedBy = filterCreatedBy, // null 表示不过滤，可以看到所有工单
                 DateFrom = dateFrom,
                 DateTo = dateTo
             };
 
             var (items, total) = await ticketService.GetTicketsAsync(filter, page, pageSize);
+            
+            logger.LogInformation("GetTickets - Returning {Count} items out of {Total} total. FilterCreatedBy: {FilterCreatedBy}", 
+                items.Count, total, filterCreatedBy?.ToString() ?? "null");
 
             return Results.Ok(new { items, total, page, pageSize });
         })
@@ -466,5 +497,10 @@ public static class TicketEndpoints
         }
         return userId;
     }
-}
 
+    private static async Task<Domain.Entities.User?> GetCurrentUserAsync(HttpContext context, Guid userId)
+    {
+        var dbContext = context.RequestServices.GetRequiredService<ApplicationDbContext>();
+        return await dbContext.Users.FindAsync(userId);
+    }
+}

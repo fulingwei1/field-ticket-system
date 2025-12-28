@@ -8,6 +8,8 @@ namespace FieldTicket.Shared.Models;
 public class CreateTicketRequest
 {
     public string? LocalDraftId { get; set; }
+    public Guid? CustomerId { get; set; }
+    public Guid? ProjectId { get; set; }
     public Guid DeviceId { get; set; }
     public Guid? StationId { get; set; }
     public char Domain { get; set; } // A/B/C/D/E

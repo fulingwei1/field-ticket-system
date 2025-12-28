@@ -71,8 +71,8 @@ public static class DeviceConfigSnapshotEndpoints
     /// </summary>
     private static async Task<IResult> CheckDifferences(
         Guid deviceId,
-        [FromQuery] Dictionary<string, object>? currentConfig,
-        IDeviceConfigSnapshotService service)
+        IDeviceConfigSnapshotService service,
+        [FromBody] Dictionary<string, object>? currentConfig)
     {
         try
         {
@@ -155,4 +155,3 @@ public static class DeviceConfigSnapshotEndpoints
         return userId;
     }
 }
-

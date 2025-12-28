@@ -33,8 +33,20 @@ export interface ProjectDto {
   updatedAt: string;
 }
 
+export interface ProjectRelatedPersonDto {
+  userId: string;
+  userName: string;
+  role?: string;
+  department?: string;
+  mobile?: string;
+  rolesInProject: string[];
+  ticketCount: number;
+  lastActivityAt?: string;
+}
+
 export interface ProjectDetailDto extends ProjectDto {
   problems: FieldProblemDto[];
+  relatedPersons: ProjectRelatedPersonDto[];
 }
 
 export interface FieldProblemDto {
@@ -164,6 +176,7 @@ class ProjectService {
     const params = new URLSearchParams();
     if (filter.projectNo) params.append('projectNo', filter.projectNo);
     if (filter.projectName) params.append('projectName', filter.projectName);
+    if (filter.customerId) params.append('customerId', filter.customerId);
     if (filter.customerName) params.append('customerName', filter.customerName);
     if (filter.deviceType) params.append('deviceType', filter.deviceType);
     if (filter.projectStatus) params.append('projectStatus', filter.projectStatus);
@@ -214,9 +227,18 @@ class ProjectService {
       `/api/projects/statistics/problems?${params.toString()}`
     );
   }
+
+  /**
+   * 获取项目相关人员
+   */
+  async getProjectRelatedPersons(projectId: string): Promise<ProjectRelatedPersonDto[]> {
+    return this.request<ProjectRelatedPersonDto[]>(`/api/projects/${projectId}/related-persons`);
+  }
 }
 
 export const projectService = new ProjectService();
+
+
 
 
 

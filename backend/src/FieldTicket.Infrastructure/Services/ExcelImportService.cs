@@ -748,45 +748,45 @@ public class ExcelImportService : IExcelImportService
         // 添加数据验证（下拉列表）
         // 问题分类下拉
         var categoryRange = worksheet.Cells[3, 14, 1000, 14];
-        categoryRange.DataValidation.AddListDataValidation();
-        categoryRange.DataValidation.Formula.Values.Add("设计");
-        categoryRange.DataValidation.Formula.Values.Add("工艺");
-        categoryRange.DataValidation.Formula.Values.Add("管理");
-        categoryRange.DataValidation.Formula.Values.Add("其他");
+        var categoryValidation = categoryRange.DataValidation.AddListDataValidation();
+        categoryValidation.Formula.Values.Add("设计");
+        categoryValidation.Formula.Values.Add("工艺");
+        categoryValidation.Formula.Values.Add("管理");
+        categoryValidation.Formula.Values.Add("其他");
 
         // 优先级下拉
         var priorityRange = worksheet.Cells[3, 16, 1000, 16];
-        priorityRange.DataValidation.AddListDataValidation();
-        priorityRange.DataValidation.Formula.Values.Add("P1");
-        priorityRange.DataValidation.Formula.Values.Add("P2");
-        priorityRange.DataValidation.Formula.Values.Add("P3");
+        var priorityValidation = priorityRange.DataValidation.AddListDataValidation();
+        priorityValidation.Formula.Values.Add("P1");
+        priorityValidation.Formula.Values.Add("P2");
+        priorityValidation.Formula.Values.Add("P3");
 
         // 处理状态下拉
         var statusRange = worksheet.Cells[3, 23, 1000, 23];
-        statusRange.DataValidation.AddListDataValidation();
-        statusRange.DataValidation.Formula.Values.Add("待分配");
-        statusRange.DataValidation.Formula.Values.Add("处理中");
-        statusRange.DataValidation.Formula.Values.Add("待验证");
-        statusRange.DataValidation.Formula.Values.Add("验证中");
-        statusRange.DataValidation.Formula.Values.Add("已验证");
-        statusRange.DataValidation.Formula.Values.Add("验证失败");
-        statusRange.DataValidation.Formula.Values.Add("已关闭");
+        var statusValidation = statusRange.DataValidation.AddListDataValidation();
+        statusValidation.Formula.Values.Add("待分配");
+        statusValidation.Formula.Values.Add("处理中");
+        statusValidation.Formula.Values.Add("待验证");
+        statusValidation.Formula.Values.Add("验证中");
+        statusValidation.Formula.Values.Add("已验证");
+        statusValidation.Formula.Values.Add("验证失败");
+        statusValidation.Formula.Values.Add("已关闭");
 
         // 验证状态下拉
         var verificationRange = worksheet.Cells[3, 26, 1000, 26];
-        verificationRange.DataValidation.AddListDataValidation();
-        verificationRange.DataValidation.Formula.Values.Add("未验证");
-        verificationRange.DataValidation.Formula.Values.Add("验证通过");
-        verificationRange.DataValidation.Formula.Values.Add("验证失败");
+        var verificationValidation = verificationRange.DataValidation.AddListDataValidation();
+        verificationValidation.Formula.Values.Add("未验证");
+        verificationValidation.Formula.Values.Add("验证通过");
+        verificationValidation.Formula.Values.Add("验证失败");
 
         // 满意度评分范围（1-5）
         var satisfactionRange = worksheet.Cells[3, 28, 1000, 28];
-        satisfactionRange.DataValidation.AddIntegerDataValidation();
-        satisfactionRange.DataValidation.Formula.Value = 1;
-        satisfactionRange.DataValidation.Formula.Value2 = 5;
-        satisfactionRange.DataValidation.ErrorStyle = OfficeOpenXml.DataValidation.ExcelDataValidationWarningStyle.stop;
-        satisfactionRange.DataValidation.ErrorTitle = "输入错误";
-        satisfactionRange.DataValidation.Error = "满意度评分必须在1-5之间";
+        var satisfactionValidation = satisfactionRange.DataValidation.AddIntegerDataValidation();
+        satisfactionValidation.Formula.Value = 1;
+        satisfactionValidation.Formula2.Value = 5;
+        satisfactionValidation.ErrorStyle = OfficeOpenXml.DataValidation.ExcelDataValidationWarningStyle.stop;
+        satisfactionValidation.ErrorTitle = "输入错误";
+        satisfactionValidation.Error = "满意度评分必须在1-5之间";
 
         // 冻结首行
         worksheet.View.FreezePanes(2, 1);
@@ -834,8 +834,6 @@ public class ExcelImportService : IExcelImportService
 
     #endregion
 }
-
-
 
 
 

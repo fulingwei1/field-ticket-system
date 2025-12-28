@@ -251,5 +251,67 @@ public class AuthService : IAuthService
             throw;
         }
     }
+
+    public async Task<AuthResult> LoginWithPasswordAsync(string username, string password)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            throw new ArgumentException("Username is required", nameof(username));
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            throw new ArgumentException("Password is required", nameof(password));
+        }
+
+        // 查找用户
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
+
+        if (user == null)
+        {
+            _logger.LogWarning("Login attempt with invalid username: {Username}", username);
+            throw new UnauthorizedAccessException("用户名或密码错误");
+        }
+
+        // 验证密码
+        // 注意：当前密码是明文存储的，仅用于测试环境
+        // 生产环境应该使用BCrypt等加密算法
+        if (string.IsNullOrEmpty(user.PasswordHash) || user.PasswordHash != password)
+        {
+            _logger.LogWarning("Login attempt with invalid password for user: {Username}", username);
+            throw new UnauthorizedAccessException("用户名或密码错误");
+        }
+
+        // 生成用户信息
+        var userInfo = new UserInfo
+        {
+            Id = user.Id.ToString(),
+            Name = user.Name,
+            Mobile = user.Mobile,
+            Role = user.Role,
+            DeptName = user.DeptId
+        };
+
+        // 生成 JWT Token
+        var token = _jwtTokenService.GenerateToken(userInfo);
+        var refreshToken = _jwtTokenService.GenerateRefreshToken();
+
+        // 缓存 refresh token（30天有效期）
+        await _cache.SetStringAsync($"refresh_token:{refreshToken}", userInfo.Id, new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(30)
+        });
+
+        _logger.LogInformation("User {UserId} ({Username}) logged in successfully with password", userInfo.Id, username);
+
+        return new AuthResult
+        {
+            Token = token,
+            RefreshToken = refreshToken,
+            ExpiresIn = 7 * 24 * 60 * 60, // 7 days in seconds
+            User = userInfo
+        };
+    }
 }
 

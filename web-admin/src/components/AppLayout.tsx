@@ -13,6 +13,7 @@ import {
   SafetyOutlined,
   SettingOutlined,
   ToolOutlined,
+  UsergroupAddOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService, UserInfo } from '../services/authService';
@@ -169,6 +170,22 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     },
   ];
 
+  // 管理员专用菜单项
+  const adminMenuItems: MenuProps['items'] = [
+    {
+      key: '/users',
+      icon: <UsergroupAddOutlined />,
+      label: '用户管理',
+    },
+  ];
+
+  // 根据用户角色合并菜单项
+  const allMenuItems: MenuProps['items'] = [
+    ...menuItems,
+    // 只有管理员才显示用户管理
+    ...(user?.role === 'Admin' || user?.role === 'admin' ? adminMenuItems : []),
+  ];
+
   const userMenuItems: MenuProps['items'] = [
     {
       key: 'profile',
@@ -247,7 +264,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           theme="light"
           mode="inline"
           selectedKeys={getSelectedKeys()}
-          items={menuItems}
+          items={allMenuItems}
           onClick={handleMenuClick}
         />
       </Sider>

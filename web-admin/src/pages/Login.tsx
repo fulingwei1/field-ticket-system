@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Card, message } from 'antd';
-import { WechatOutlined } from '@ant-design/icons';
+import { Button, Card, message, Input, Tabs, Divider } from 'antd';
+import { WechatOutlined, UserOutlined, LockOutlined } from '@ant-design/icons';
 import { authService, UserInfo } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 
 const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [activeTab, setActiveTab] = useState('password');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,6 +39,25 @@ const Login: React.FC = () => {
     } catch (error) {
       console.error('Failed to get WeCom login URL:', error);
       message.error('获取登录链接失败，请稍后重试');
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordLogin = async () => {
+    if (!username || !password) {
+      message.warning('请输入账户和密码');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await authService.loginWithPassword(username, password);
+      message.success('登录成功');
+      navigate('/');
+    } catch (error: any) {
+      console.error('Failed to login:', error);
+      message.error(error.message || '登录失败，请检查账户和密码');
+    } finally {
       setLoading(false);
     }
   };
@@ -93,25 +115,76 @@ const Login: React.FC = () => {
           </div>
         }
       >
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <p style={{ color: '#666', marginBottom: '32px' }}>
-            请使用企业微信扫码登录
-          </p>
-          <Button
-            type="primary"
-            size="large"
-            icon={<WechatOutlined />}
-            loading={loading}
-            onClick={handleWeComLogin}
-            style={{
-              width: '100%',
-              height: '48px',
-              fontSize: '16px',
-            }}
-          >
-            企业微信登录
-          </Button>
-        </div>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'password',
+              label: '账号密码登录',
+              children: (
+                <div style={{ padding: '8px 0' }}>
+                  <Input
+                    size="large"
+                    prefix={<UserOutlined />}
+                    placeholder="请输入账户（姓名的拼音）"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    onPressEnter={handlePasswordLogin}
+                    style={{ marginBottom: '16px' }}
+                  />
+                  <Input.Password
+                    size="large"
+                    prefix={<LockOutlined />}
+                    placeholder="请输入密码"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onPressEnter={handlePasswordLogin}
+                    style={{ marginBottom: '24px' }}
+                  />
+                  <Button
+                    type="primary"
+                    size="large"
+                    loading={loading}
+                    onClick={handlePasswordLogin}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      fontSize: '16px',
+                    }}
+                  >
+                    登录
+                  </Button>
+                </div>
+              ),
+            },
+            {
+              key: 'wecom',
+              label: '企业微信登录',
+              children: (
+                <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                  <p style={{ color: '#666', marginBottom: '32px' }}>
+                    请使用企业微信扫码登录
+                  </p>
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<WechatOutlined />}
+                    loading={loading}
+                    onClick={handleWeComLogin}
+                    style={{
+                      width: '100%',
+                      height: '48px',
+                      fontSize: '16px',
+                    }}
+                  >
+                    企业微信登录
+                  </Button>
+                </div>
+              ),
+            },
+          ]}
+        />
       </Card>
     </div>
   );

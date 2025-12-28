@@ -51,8 +51,8 @@ public static class StatisticsExportEndpoints
     private static async Task<IResult> ExportOverview(
         [FromQuery] DateTime? fromDate,
         [FromQuery] DateTime? toDate,
-        [FromQuery] string format = "csv",
-        IStatisticsExportService service)
+        IStatisticsExportService service,
+        [FromQuery] string format = "csv")
     {
         try
         {
@@ -70,11 +70,11 @@ public static class StatisticsExportEndpoints
     /// 导出Top问题域
     /// </summary>
     private static async Task<IResult> ExportTopDomains(
-        [FromQuery] int topN = 10,
         [FromQuery] DateTime? fromDate,
         [FromQuery] DateTime? toDate,
-        [FromQuery] string format = "csv",
-        IStatisticsExportService service)
+        IStatisticsExportService service,
+        [FromQuery] int topN = 10,
+        [FromQuery] string format = "csv")
     {
         try
         {
@@ -94,8 +94,8 @@ public static class StatisticsExportEndpoints
     private static async Task<IResult> ExportClosureTimeDistribution(
         [FromQuery] DateTime? fromDate,
         [FromQuery] DateTime? toDate,
-        [FromQuery] string format = "csv",
-        IStatisticsExportService service)
+        IStatisticsExportService service,
+        [FromQuery] string format = "csv")
     {
         try
         {
@@ -115,8 +115,8 @@ public static class StatisticsExportEndpoints
     private static async Task<IResult> ExportStatusStatistics(
         [FromQuery] DateTime? fromDate,
         [FromQuery] DateTime? toDate,
-        [FromQuery] string format = "csv",
-        IStatisticsExportService service)
+        IStatisticsExportService service,
+        [FromQuery] string format = "csv")
     {
         try
         {
@@ -137,9 +137,9 @@ public static class StatisticsExportEndpoints
         [FromQuery] string metricType,
         [FromQuery] DateTime fromDate,
         [FromQuery] DateTime toDate,
+        IStatisticsExportService service,
         [FromQuery] string groupBy = "day",
-        [FromQuery] string format = "csv",
-        IStatisticsExportService service)
+        [FromQuery] string format = "csv")
     {
         try
         {
@@ -159,8 +159,8 @@ public static class StatisticsExportEndpoints
     private static async Task<IResult> ExportFullReport(
         [FromQuery] DateTime? fromDate,
         [FromQuery] DateTime? toDate,
-        [FromQuery] string format = "csv",
-        IStatisticsExportService service)
+        IStatisticsExportService service,
+        [FromQuery] string format = "csv")
     {
         try
         {
@@ -174,6 +174,8 @@ public static class StatisticsExportEndpoints
         }
     }
 }
+
+
 
 
 

@@ -3,7 +3,7 @@
  */
 import { authService } from './authService';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export interface DeviceDto {
   deviceId: string;
@@ -21,9 +21,14 @@ class DeviceService {
   /**
    * 获取设备列表
    */
-  async getDevices(page: number = 1, pageSize: number = 50): Promise<DeviceDto[]> {
+  async getDevices(page: number = 1, pageSize: number = 50, projectId?: string): Promise<DeviceDto[]> {
+    const params = new URLSearchParams();
+    params.append('page', String(page));
+    params.append('pageSize', String(pageSize));
+    if (projectId) params.append('projectId', projectId);
+
     const response = await fetch(
-      `${API_BASE_URL}/api/devices?page=${page}&pageSize=${pageSize}`,
+      `${API_BASE_URL}/api/devices?${params.toString()}`,
       {
         headers: authService.getAuthHeaders(),
       }
@@ -56,9 +61,15 @@ class DeviceService {
   /**
    * 搜索设备
    */
-  async searchDevices(keyword: string, page: number = 1, pageSize: number = 50): Promise<DeviceDto[]> {
+  async searchDevices(keyword: string, page: number = 1, pageSize: number = 50, projectId?: string): Promise<DeviceDto[]> {
+    const params = new URLSearchParams();
+    params.append('keyword', keyword);
+    params.append('page', String(page));
+    params.append('pageSize', String(pageSize));
+    if (projectId) params.append('projectId', projectId);
+
     const response = await fetch(
-      `${API_BASE_URL}/api/devices/search?keyword=${encodeURIComponent(keyword)}&page=${page}&pageSize=${pageSize}`,
+      `${API_BASE_URL}/api/devices/search?${params.toString()}`,
       {
         headers: authService.getAuthHeaders(),
       }
@@ -74,6 +85,8 @@ class DeviceService {
 }
 
 export const deviceService = new DeviceService();
+
+
 
 
 

@@ -7,6 +7,7 @@ public class ProjectQueryFilter
 {
     public string? ProjectNo { get; set; }
     public string? ProjectName { get; set; }
+    public Guid? CustomerId { get; set; }
     public string? CustomerName { get; set; }
     public string? DeviceType { get; set; }
     public string? ProjectStatus { get; set; }
@@ -45,6 +46,22 @@ public class ProjectDto
 public class ProjectDetailDto : ProjectDto
 {
     public List<FieldProblemDto> Problems { get; set; } = new();
+    public List<ProjectRelatedPersonDto> RelatedPersons { get; set; } = new();
+}
+
+/// <summary>
+/// 项目相关人员DTO
+/// </summary>
+public class ProjectRelatedPersonDto
+{
+    public Guid UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string? Role { get; set; }
+    public string? Department { get; set; }
+    public string? Mobile { get; set; }
+    public List<string> RolesInProject { get; set; } = new(); // 在项目中的角色：项目经理、创建工单、分诊、处理、解决方案、验证、责任归属等
+    public int TicketCount { get; set; } // 相关工单数量
+    public DateTime? LastActivityAt { get; set; } // 最后活动时间
 }
 
 /// <summary>
@@ -148,6 +165,8 @@ public class CustomerStatistics
     public int Count { get; set; }
     public decimal AverageSatisfactionScore { get; set; }
 }
+
+
 
 
 

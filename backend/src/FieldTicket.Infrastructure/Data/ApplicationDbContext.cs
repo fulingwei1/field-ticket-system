@@ -48,8 +48,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<CorrectiveAction> CorrectiveActions { get; set; } = null!;
     public DbSet<KnowledgeVerificationHistory> KnowledgeVerificationHistories { get; set; } = null!;
     public DbSet<JudgementCardRelation> JudgementCardRelations { get; set; } = null!;
+    public DbSet<Customer> Customers { get; set; } = null!;
     public DbSet<Project> Projects { get; set; } = null!;
     public DbSet<FieldProblem> FieldProblems { get; set; } = null!;
+    public DbSet<Device> Devices { get; set; } = null!;
     public DbSet<RootCauseAnalysis> RootCauseAnalyses { get; set; } = null!;
     public DbSet<MissingInfoConversationHistory> MissingInfoConversationHistories { get; set; } = null!;
     public DbSet<EngineerLoadStat> EngineerLoadStats { get; set; } = null!;
@@ -69,12 +71,15 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
             entity.Property(e => e.Mobile).HasColumnName("mobile").HasMaxLength(20);
             entity.Property(e => e.DeptId).HasColumnName("dept_id").HasMaxLength(64);
-            entity.Property(e => e.Role).HasColumnName("role").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Role).HasColumnName("role").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Username).HasColumnName("username").HasMaxLength(50);
+            entity.Property(e => e.PasswordHash).HasColumnName("password_hash").HasMaxLength(255);
             entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
 
             entity.HasIndex(e => new { e.CorpId, e.WeComUserId }).IsUnique();
+            entity.HasIndex(e => e.Username).IsUnique();
         });
 
         // Ticket 实体配置
@@ -85,8 +90,13 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.TicketId).HasColumnName("ticket_id");
             entity.Property(e => e.TicketNo).HasColumnName("ticket_no").HasMaxLength(20).IsRequired();
             entity.Property(e => e.CustomerId).HasColumnName("customer_id").IsRequired();
+            // CustomerName 不存储在 tickets 表中，从 projects 表关联获取
+            entity.Ignore(e => e.CustomerName);
             entity.Property(e => e.ProjectId).HasColumnName("project_id").IsRequired();
             entity.Property(e => e.DeviceId).HasColumnName("device_id").IsRequired();
+            // DeviceSn 和 DeviceName 不存储在 tickets 表中，从 devices 表关联获取
+            entity.Ignore(e => e.DeviceSn);
+            entity.Ignore(e => e.DeviceName);
             entity.Property(e => e.StationId).HasColumnName("station_id");
             entity.Property(e => e.CreatedByUserId).HasColumnName("created_by_user_id").IsRequired();
             entity.Property(e => e.Domain).HasColumnName("domain").HasMaxLength(1).IsRequired();
@@ -474,6 +484,22 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(e => new { e.DeviceId, e.SnapshotType });
         });
 
+        // DuplicateDetectionLog 实体配置
+        modelBuilder.Entity<DuplicateDetectionLog>(entity =>
+        {
+            entity.ToTable("duplicate_detection_logs");
+            entity.HasKey(e => e.LogId);
+            entity.Property(e => e.LogId).HasColumnName("log_id");
+            entity.Property(e => e.TicketId).HasColumnName("ticket_id").IsRequired();
+            entity.Property(e => e.PotentialDuplicates).HasColumnName("potential_duplicates").HasColumnType("uuid[]").IsRequired();
+            entity.Property(e => e.SimilarityScores).HasColumnName("similarity_scores").HasColumnType("jsonb").IsRequired();
+            entity.Property(e => e.DetectedAt).HasColumnName("detected_at").IsRequired();
+            entity.Property(e => e.DetectionType).HasColumnName("detection_type").HasMaxLength(20).IsRequired();
+
+            entity.HasIndex(e => e.TicketId);
+            entity.HasIndex(e => e.DetectedAt);
+        });
+
         // Verification 实体配置
         modelBuilder.Entity<Verification>(entity =>
         {
@@ -608,6 +634,27 @@ public class ApplicationDbContext : DbContext
 
             entity.HasIndex(e => e.ConversationId).HasDatabaseName("idx_verification_steps_conversation");
             entity.HasIndex(e => e.VerificationStatus).HasDatabaseName("idx_verification_steps_status");
+        });
+
+        // MissingInfoConversationHistory 实体配置
+        modelBuilder.Entity<MissingInfoConversationHistory>(entity =>
+        {
+            entity.ToTable("missing_info_conversation_history");
+            entity.HasKey(e => e.ConversationId);
+            entity.Property(e => e.ConversationId).HasColumnName("conversation_id");
+            entity.Property(e => e.TicketId).HasColumnName("ticket_id").IsRequired();
+            entity.Property(e => e.RoundNumber).HasColumnName("round_number").IsRequired();
+            entity.Property(e => e.QuestionId).HasColumnName("question_id").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Question).HasColumnName("question").IsRequired();
+            entity.Property(e => e.QuestionType).HasColumnName("question_type").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.UserAnswer).HasColumnName("user_answer");
+            entity.Property(e => e.AnsweredAt).HasColumnName("answered_at");
+            entity.Property(e => e.IsAnswered).HasColumnName("is_answered").HasDefaultValue(false);
+            entity.Property(e => e.IsSkipped).HasColumnName("is_skipped").HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+
+            entity.HasIndex(e => e.TicketId);
+            entity.HasIndex(e => new { e.TicketId, e.RoundNumber });
         });
 
         // ConfidenceCalibrationRecord 实体配置
@@ -949,13 +996,13 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Content).HasColumnName("content").IsRequired();
             entity.Property(e => e.CommunicationType).HasColumnName("comm_type").HasMaxLength(20).IsRequired();
             entity.Property(e => e.CommunicatedBy).HasColumnName("by_user_id").IsRequired();
-            entity.Property(e => e.CommunicatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
+            entity.Property(e => e.CommunicatedAt).HasColumnName("communicated_at").HasDefaultValueSql("NOW()");
             entity.Property(e => e.CustomerFeedback).HasColumnName("customer_feedback");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
 
             entity.HasIndex(e => e.TicketId).HasDatabaseName("idx_comms_ticket");
             entity.HasIndex(e => e.TemplateId).HasDatabaseName("idx_comms_template");
-            entity.HasIndex(e => e.CommunicatedAt).HasDatabaseName("idx_comms_created_at");
+            entity.HasIndex(e => e.CommunicatedAt).HasDatabaseName("idx_comms_communicated_at");
         });
 
         // KnowledgeVerificationHistory 实体配置
@@ -1063,6 +1110,41 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.ProjectNo).IsUnique().HasDatabaseName("idx_projects_project_no");
             entity.HasIndex(e => e.CustomerId).HasDatabaseName("idx_projects_customer_id");
             entity.HasIndex(e => e.ProjectStatus).HasDatabaseName("idx_projects_project_status");
+        });
+
+        // Customer 实体配置
+        modelBuilder.Entity<Customer>(entity =>
+        {
+            entity.ToTable("customers");
+            entity.HasKey(e => e.CustomerId);
+            entity.Property(e => e.CustomerId).HasColumnName("customer_id");
+            entity.Property(e => e.CustomerName).HasColumnName("customer_name").HasMaxLength(200).IsRequired();
+            entity.Property(e => e.CustomerCode).HasColumnName("customer_code").HasMaxLength(50);
+            entity.Property(e => e.IndustryType).HasColumnName("industry_type").HasMaxLength(50);
+            entity.Property(e => e.ContactPerson).HasColumnName("contact_person").HasMaxLength(100);
+            entity.Property(e => e.ContactPhone).HasColumnName("contact_phone").HasMaxLength(20);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()");
+        });
+
+        // Device 实体配置
+        modelBuilder.Entity<Device>(entity =>
+        {
+            entity.ToTable("devices");
+            entity.HasKey(e => e.DeviceId);
+            entity.Property(e => e.DeviceId).HasColumnName("device_id");
+            entity.Property(e => e.DeviceSn).HasColumnName("device_sn").HasMaxLength(100);
+            entity.Property(e => e.DeviceName).HasColumnName("device_name").HasMaxLength(200).IsRequired();
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.DeviceType).HasColumnName("device_type").HasMaxLength(50);
+            entity.Property(e => e.Model).HasColumnName("model").HasMaxLength(100);
+            entity.Property(e => e.Location).HasColumnName("location").HasMaxLength(200);
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("active");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()");
+
+            entity.HasIndex(e => e.DeviceSn).IsUnique().HasDatabaseName("devices_device_sn_key");
+            entity.HasIndex(e => e.ProjectId).HasDatabaseName("idx_devices_project_id");
         });
 
         // FieldProblem 实体配置

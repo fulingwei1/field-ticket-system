@@ -4,6 +4,7 @@ using FieldTicket.Infrastructure.Data;
 using FieldTicket.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace FieldTicket.Infrastructure.Services;
 

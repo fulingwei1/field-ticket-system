@@ -83,9 +83,9 @@ public static class StatisticsEndpoints
     /// 获取闭环时间分布
     /// </summary>
     private static async Task<IResult> GetClosureTimeDistribution(
+        IStatisticsService service,
         [FromQuery] DateTime? fromDate = null,
-        [FromQuery] DateTime? toDate = null,
-        IStatisticsService service)
+        [FromQuery] DateTime? toDate = null)
     {
         try
         {
@@ -102,9 +102,9 @@ public static class StatisticsEndpoints
     /// 获取工单状态统计
     /// </summary>
     private static async Task<IResult> GetStatusStatistics(
+        IStatisticsService service,
         [FromQuery] DateTime? fromDate = null,
-        [FromQuery] DateTime? toDate = null,
-        IStatisticsService service)
+        [FromQuery] DateTime? toDate = null)
     {
         try
         {
@@ -138,4 +138,3 @@ public static class StatisticsEndpoints
         }
     }
 }
-

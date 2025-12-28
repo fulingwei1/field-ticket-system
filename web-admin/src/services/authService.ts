@@ -202,6 +202,31 @@ class AuthService {
       'Content-Type': 'application/json',
     };
   }
+
+  /**
+   * 账号密码登录
+   */
+  async loginWithPassword(username: string, password: string): Promise<AuthResult> {
+    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        const error = await response.json().catch(() => ({ message: '用户名或密码错误' }));
+        throw new Error(error.message || '用户名或密码错误');
+      }
+      throw new Error('登录失败，请稍后重试');
+    }
+
+    const result: AuthResult = await response.json();
+    this.saveAuth(result);
+    return result;
+  }
 }
 
 export const authService = new AuthService();

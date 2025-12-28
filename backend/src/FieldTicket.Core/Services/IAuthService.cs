@@ -31,6 +31,11 @@ public interface IAuthService
     /// 处理企业微信小程序登录
     /// </summary>
     Task<AuthResult> HandleWeComMiniProgramLoginAsync(string code);
+
+    /// <summary>
+    /// 账号密码登录
+    /// </summary>
+    Task<AuthResult> LoginWithPasswordAsync(string username, string password);
 }
 
 

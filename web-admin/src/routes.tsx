@@ -32,6 +32,7 @@ import ProjectList from './pages/projects/ProjectList';
 import ProblemDetail from './pages/projects/ProblemDetail';
 import ProblemStatistics from './pages/projects/ProblemStatistics';
 import UserProfile from './pages/user-profile/UserProfile';
+import UserManagement from './pages/users/UserManagement';
 import ThresholdManagement from './pages/thresholds/ThresholdManagement';
 import AppLayout from './components/AppLayout';
 
@@ -145,6 +146,9 @@ export default function AppRoutes() {
               
               {/* 用户画像 */}
               <Route path="/user-profile" element={<UserProfile />} />
+              
+              {/* 用户管理（仅管理员） */}
+              <Route path="/users" element={<UserManagement />} />
               
               {/* 智能阈值管理 */}
               <Route path="/thresholds" element={<ThresholdManagement />} />

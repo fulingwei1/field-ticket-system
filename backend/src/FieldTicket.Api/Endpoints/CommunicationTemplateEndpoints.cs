@@ -56,7 +56,7 @@ public static class CommunicationTemplateEndpoints
 
         // 获取工单的沟通记录
         group.MapGet("tickets/{ticketId:guid}/communications", GetTicketCommunications)
-            .WithName("GetTicketCommunications")
+            .WithName("GetTicketCommunicationsByTemplate")
             .WithSummary("获取工单的沟通记录");
     }
 
@@ -258,6 +258,8 @@ public static class CommunicationTemplateEndpoints
         }
     }
 }
+
+
 
 
 

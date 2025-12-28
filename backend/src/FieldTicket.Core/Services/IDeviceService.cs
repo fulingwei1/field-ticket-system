@@ -6,9 +6,9 @@ namespace FieldTicket.Core.Services;
 public interface IDeviceService
 {
     /// <summary>
-    /// 获取设备列表（从工单中提取）
+    /// 获取设备列表
     /// </summary>
-    Task<List<DeviceDto>> GetDevicesAsync(int page = 1, int pageSize = 50);
+    Task<List<DeviceDto>> GetDevicesAsync(int page = 1, int pageSize = 50, Guid? projectId = null);
 
     /// <summary>
     /// 根据设备ID获取设备信息
@@ -18,7 +18,7 @@ public interface IDeviceService
     /// <summary>
     /// 搜索设备（按设备SN或名称）
     /// </summary>
-    Task<List<DeviceDto>> SearchDevicesAsync(string keyword, int page = 1, int pageSize = 50);
+    Task<List<DeviceDto>> SearchDevicesAsync(string keyword, int page = 1, int pageSize = 50, Guid? projectId = null);
 }
 
 /// <summary>
@@ -36,6 +36,8 @@ public class DeviceDto
     public int TicketCount { get; set; }
     public DateTime? LastTicketAt { get; set; }
 }
+
+
 
 
 

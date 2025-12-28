@@ -36,8 +36,8 @@ public static class DuplicateDetectionEndpoints
     /// </summary>
     private static async Task<IResult> CheckDuplicates(
         Guid ticketId,
-        [FromQuery] int maxResults = 10,
-        IDuplicateDetectionService service)
+        IDuplicateDetectionService service,
+        [FromQuery] int maxResults = 10)
     {
         try
         {
@@ -125,4 +125,3 @@ public class MergeTicketsRequest
 {
     public string Reason { get; set; } = string.Empty;
 }
-
