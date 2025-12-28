@@ -27,6 +27,7 @@ import {
   LinkOutlined,
   MessageOutlined,
   InfoCircleOutlined,
+  BulbOutlined,
 } from '@ant-design/icons';
 import { ticketService, TicketDto } from '../../services/ticketService';
 import { solutionService, SolutionDto } from '../../services/solutionService';
@@ -39,6 +40,7 @@ import TicketAssociations from '../../components/tickets/TicketAssociations';
 import CustomerCommunication from '../../components/tickets/CustomerCommunication';
 import ResponsibilityAttribution from '../../components/tickets/ResponsibilityAttribution';
 import RecentChanges from '../../components/tickets/RecentChanges';
+import SolutionRecommendations from '../../components/SolutionRecommendations';
 
 const { TabPane } = Tabs;
 
@@ -383,6 +385,22 @@ export default function TicketDetail() {
               )}
             </Card>
           </TabPane>
+
+          {/* 推荐方案 */}
+          {ticket.status !== 'Draft' && ticket.status !== 'Closed' && (
+            <TabPane tab={<span><BulbOutlined /> 推荐方案</span>} key="recommendations">
+              {ticketId && (
+                <SolutionRecommendations
+                  ticketId={ticketId}
+                  onSelectSolution={(solutionId) => {
+                    message.success('已选择推荐方案');
+                    // 可以跳转到创建解决方案页面，并预填充该方案的内容
+                    navigate(`/tickets/${ticketId}/solutions/new?ref=${solutionId}`);
+                  }}
+                />
+              )}
+            </TabPane>
+          )}
 
           {/* 解决方案 */}
           <TabPane tab={<span><SolutionOutlined /> 解决方案 ({solutions.length})</span>} key="solutions">

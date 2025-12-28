@@ -13,16 +13,19 @@ public class TicketBatchService : ITicketBatchService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly ITicketStatusHistoryService _statusHistoryService;
+    private readonly IFieldProblemAutoGenerationService? _fieldProblemService;
     private readonly ILogger<TicketBatchService> _logger;
 
     public TicketBatchService(
         ApplicationDbContext dbContext,
         ITicketStatusHistoryService statusHistoryService,
-        ILogger<TicketBatchService> logger)
+        ILogger<TicketBatchService> logger,
+        IFieldProblemAutoGenerationService? fieldProblemService = null)
     {
         _dbContext = dbContext;
         _statusHistoryService = statusHistoryService;
         _logger = logger;
+        _fieldProblemService = fieldProblemService;
     }
 
     public async Task<BatchOperationResult> BatchUpdateStatusAsync(
@@ -56,6 +59,12 @@ public class TicketBatchService : ITicketBatchService
                 ticket.Status = newStatus;
                 ticket.UpdatedAt = DateTime.UtcNow;
 
+                // 如果状态变更为已关闭，设置关闭时间
+                if (newStatus == "Closed" && !ticket.ClosedAt.HasValue)
+                {
+                    ticket.ClosedAt = DateTime.UtcNow;
+                }
+
                 // 记录状态变更历史
                 await _statusHistoryService.RecordStatusChangeAsync(
                     ticket.TicketId,
@@ -65,6 +74,39 @@ public class TicketBatchService : ITicketBatchService
                     reason ?? "批量更新状态",
                     "batch_operation"
                 );
+
+                // 自动知识沉淀：当工单关闭时，自动生成现场问题记录
+                if (newStatus == "Closed" && _fieldProblemService != null)
+                {
+                    try
+                    {
+                        _logger.LogInformation("工单 {TicketId} 已关闭，开始自动生成问题记录", ticket.TicketId);
+                        var problemResult = await _fieldProblemService.GenerateFromTicketAsync(ticket.TicketId);
+
+                        if (problemResult.Success)
+                        {
+                            _logger.LogInformation(
+                                "成功为工单 {TicketId} 生成问题记录 {ProblemId}，重复问题检测结果: {IsRepeat}",
+                                ticket.TicketId,
+                                problemResult.ProblemId,
+                                problemResult.IsRepeatProblem);
+                        }
+                        else
+                        {
+                            _logger.LogWarning(
+                                "工单 {TicketId} 生成问题记录失败: {Message}",
+                                ticket.TicketId,
+                                problemResult.Message);
+                        }
+                    }
+                    catch (Exception knowledgeEx)
+                    {
+                        // 知识沉淀失败不应影响工单关闭，仅记录错误日志
+                        _logger.LogError(knowledgeEx,
+                            "工单 {TicketId} 自动知识沉淀失败，但工单仍然成功关闭",
+                            ticket.TicketId);
+                    }
+                }
 
                 result.SuccessCount++;
             }

@@ -13,10 +13,20 @@ import {
   SafetyOutlined,
   SettingOutlined,
   ToolOutlined,
+  DashboardOutlined,
+  CustomerServiceOutlined,
+  DatabaseOutlined,
+  UploadOutlined,
+  CheckCircleOutlined,
+  UserAddOutlined,
+  EditOutlined,
+  HistoryOutlined,
+  FireOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService, UserInfo } from '../services/authService';
 import type { MenuProps } from 'antd';
+import { usePermission } from '../hooks/usePermission';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -31,6 +41,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const { canAccessMenu } = usePermission();
 
   useEffect(() => {
     // 检查是否已登录
@@ -64,7 +75,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     navigate('/login');
   };
 
-  const menuItems: MenuProps['items'] = [
+  // 定义所有菜单项
+  const allMenuItems: MenuProps['items'] = [
+    {
+      key: '/',
+      icon: <DashboardOutlined />,
+      label: '首页概览',
+    },
     {
       key: '/tickets',
       icon: <FileTextOutlined />,
@@ -73,6 +90,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {
           key: '/tickets',
           label: '工单列表',
+        },
+        {
+          key: '/tickets/kanban',
+          label: '工单看板',
         },
         {
           key: '/tickets/new',
@@ -114,6 +135,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       key: '/statistics',
       icon: <BarChartOutlined />,
       label: '统计分析',
+      children: [
+        {
+          key: '/statistics',
+          label: '统计面板',
+        },
+        {
+          key: '/analytics/problem-hotspots',
+          icon: <FireOutlined />,
+          label: '问题热点分析',
+        },
+      ],
     },
     {
       key: '/corrective-actions',
@@ -131,6 +163,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       label: '判断卡管理',
       children: [
         {
+          key: '/judgement-cards',
+          label: '判断卡列表',
+        },
+        {
           key: '/judgement-cards/quality',
           label: '质量评分',
         },
@@ -141,10 +177,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       ],
     },
     {
+      key: '/customers',
+      icon: <CustomerServiceOutlined />,
+      label: '客户管理',
+    },
+    {
       key: '/devices',
       icon: <SettingOutlined />,
       label: '设备管理',
       children: [
+        {
+          key: '/devices',
+          label: '设备列表',
+        },
         {
           key: '/devices/config-snapshot',
           label: '配置快照',
@@ -161,13 +206,85 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       label: '项目管理',
       children: [
         {
+          key: '/projects',
+          label: '项目列表',
+        },
+        {
           key: '/projects/excel-import',
           label: 'Excel导入',
           icon: <PlusOutlined />,
         },
       ],
     },
+    {
+      key: '/knowledge-graph',
+      icon: <DatabaseOutlined />,
+      label: '知识图谱',
+    },
+    {
+      key: '/users',
+      icon: <TeamOutlined />,
+      label: '用户管理',
+      children: [
+        {
+          key: '/users',
+          icon: <UserOutlined />,
+          label: '用户列表',
+        },
+        {
+          key: '/users/import',
+          icon: <UploadOutlined />,
+          label: '员工批量导入',
+        },
+        {
+          key: '/users/update',
+          icon: <EditOutlined />,
+          label: '员工批量更新',
+        },
+        {
+          key: '/users/activate',
+          icon: <CheckCircleOutlined />,
+          label: '账户开通审核',
+        },
+        {
+          key: '/users/logs',
+          icon: <HistoryOutlined />,
+          label: '操作日志',
+        },
+      ],
+    },
   ];
+
+  // 根据权限过滤菜单项
+  const filterMenuItems = (items: MenuProps['items']): MenuProps['items'] => {
+    if (!items) return [];
+
+    return items
+      .map((item: any) => {
+        if (!item) return null;
+
+        // 检查当前项是否有权限访问
+        const hasAccess = canAccessMenu(item.key);
+        if (!hasAccess) return null;
+
+        // 如果有子菜单，递归过滤
+        if (item.children && item.children.length > 0) {
+          const filteredChildren = filterMenuItems(item.children);
+          // 如果所有子菜单都被过滤掉了，则不显示父菜单
+          if (filteredChildren.length === 0) return null;
+
+          return {
+            ...item,
+            children: filteredChildren,
+          };
+        }
+
+        return item;
+      })
+      .filter(Boolean);
+  };
+
+  const menuItems = filterMenuItems(allMenuItems);
 
   const userMenuItems: MenuProps['items'] = [
     {
@@ -195,16 +312,38 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   // 获取当前选中的菜单项
   const getSelectedKeys = () => {
     const path = location.pathname;
-    if (path.startsWith('/performance')) {
-      return [path];
-    }
-    if (path.startsWith('/tickets')) {
-      return [path];
-    }
-    if (path.startsWith('/corrective-actions')) {
-      return [path];
-    }
+
+    // 对于各个模块，返回当前路径
+    if (path.startsWith('/tickets')) return [path];
+    if (path.startsWith('/performance')) return [path];
+    if (path.startsWith('/statistics')) return ['/statistics'];
+    if (path.startsWith('/corrective-actions')) return [path];
+    if (path.startsWith('/ai-analysis')) return ['/ai-analysis'];
+    if (path.startsWith('/judgement-cards')) return [path];
+    if (path.startsWith('/customers')) return ['/customers'];
+    if (path.startsWith('/devices')) return [path];
+    if (path.startsWith('/projects')) return [path];
+    if (path.startsWith('/knowledge-graph')) return ['/knowledge-graph'];
+    if (path.startsWith('/users')) return [path]; // 返回完整路径，支持子菜单
+
     return [];
+  };
+
+  // 获取默认展开的菜单项
+  const getOpenKeys = () => {
+    const path = location.pathname;
+    const openKeys: string[] = [];
+
+    // 根据当前路径确定需要展开的菜单
+    if (path.startsWith('/tickets')) openKeys.push('/tickets');
+    if (path.startsWith('/performance')) openKeys.push('/performance');
+    if (path.startsWith('/ai-analysis')) openKeys.push('/ai-analysis');
+    if (path.startsWith('/judgement-cards')) openKeys.push('/judgement-cards');
+    if (path.startsWith('/devices')) openKeys.push('/devices');
+    if (path.startsWith('/projects')) openKeys.push('/projects');
+    if (path.startsWith('/users')) openKeys.push('/users'); // 展开用户管理子菜单
+
+    return openKeys;
   };
 
   // 如果未登录，不渲染布局（让 React Router 处理跳转）
@@ -247,6 +386,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           theme="light"
           mode="inline"
           selectedKeys={getSelectedKeys()}
+          defaultOpenKeys={getOpenKeys()}
           items={menuItems}
           onClick={handleMenuClick}
         />

@@ -151,6 +151,11 @@ builder.Services.AddScoped<IKPIAnomalyService, FieldTicket.Infrastructure.Servic
 builder.Services.AddScoped<IExcelImportService, FieldTicket.Infrastructure.Services.ExcelImportService>();
 builder.Services.AddScoped<IRootCauseAnalysisService, FieldTicket.Infrastructure.Services.RootCauseAnalysisService>();
 builder.Services.AddScoped<IProjectService, FieldTicket.Infrastructure.Services.ProjectService>();
+builder.Services.AddScoped<EmployeeExportService>();
+builder.Services.AddScoped<EmployeeUpdateService>();
+builder.Services.AddScoped<OperationLogService>();
+builder.Services.AddScoped<ISolutionRecommendationService, SolutionRecommendationService>();
+builder.Services.AddScoped<IFieldProblemAutoGenerationService, FieldProblemAutoGenerationService>();
 
 // 配置角色映射
 var roleMappingConfig = FieldTicket.Infrastructure.WeCom.RoleMappingConfig.LoadFromConfiguration(builder.Configuration);
@@ -188,9 +193,15 @@ app.UseAuthorization();
 
 // 映射 API 端点
 app.MapAuthEndpoints();
+app.MapUserEndpoints();
+app.MapEmployeeImportEndpoints();
+app.MapEmployeeExportEndpoints();
+app.MapEmployeeUpdateEndpoints();
+app.MapOperationLogEndpoints();
 app.MapTicketEndpoints();
 app.MapTriageEndpoints();
 app.MapSolutionEndpoints();
+app.MapSolutionRecommendationEndpoints();
 app.MapVerificationEndpoints();
 app.MapJudgementCardQualityEndpoints();
 app.MapPerformanceEndpoints();
@@ -234,6 +245,7 @@ app.MapExcelImportEndpoints();
 app.MapRootCauseAnalysisEndpoints();
 app.MapProjectEndpoints();
 app.MapFactTableEndpoints();
+app.MapFieldProblemEndpoints();
 
 // Health check
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))

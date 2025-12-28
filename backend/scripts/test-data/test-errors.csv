@@ -1,0 +1,11 @@
+姓名,身份证号,部门名称,部门号,上级姓名,手机号,邮箱,角色
+,1234,技术部,DEPT001,,13800138000,empty@example.com,FieldEngineer
+张三,,技术部,DEPT001,,13900139000,noid@example.com,FieldEngineer
+李四,12,技术部,DEPT001,,13700137000,shortid@example.com,FieldEngineer
+王五,1234,,DEPT001,,13600136000,nodept@example.com,FieldEngineer
+赵六,1234,技术部,DEPT001,不存在的上级,13500135000,noboss@example.com,FieldEngineer
+正常数据,1234,技术部,DEPT001,,13400134000,normal1@example.com,FieldEngineer
+重复数据,5678,销售部,DEPT002,,13300133000,dup@example.com,CS
+重复数据,5678,销售部,DEPT002,,13200132000,dup@example.com,CS
+孙七,9012,工程部,DEPT003,,13100131000,sunqi@example.com,InvalidRole
+周八,3456,客服部,DEPT004,,invalid-phone,zhouba@example.com,FieldEngineer

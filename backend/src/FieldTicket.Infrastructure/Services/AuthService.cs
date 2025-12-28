@@ -6,6 +6,7 @@ using FieldTicket.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
+using BCrypt.Net;
 
 namespace FieldTicket.Infrastructure.Services;
 
@@ -249,6 +250,193 @@ public class AuthService : IAuthService
         {
             _logger.LogError(ex, "Failed to handle WeCom MiniProgram login");
             throw;
+        }
+    }
+
+    // ========== 用户名密码登录实现 ==========
+
+    public async Task<AuthResult> PasswordLoginAsync(string username, string password, bool rememberMe = false)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            throw new ArgumentException("Username is required", nameof(username));
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            throw new ArgumentException("Password is required", nameof(password));
+        }
+
+        try
+        {
+            // 1. 查找用户
+            var user = await _dbContext.Users
+                .FirstOrDefaultAsync(u => u.Username == username && u.LoginType == "Password");
+
+            if (user == null || !user.IsActive)
+            {
+                _logger.LogWarning("Login failed: user not found or inactive - {Username}", username);
+                throw new UnauthorizedAccessException("Invalid username or password");
+            }
+
+            // 检查账户是否已开通
+            if (!user.IsActivated)
+            {
+                _logger.LogWarning("Login failed: account not activated - {Username}", username);
+                throw new UnauthorizedAccessException("账户未开通，请联系管理员");
+            }
+
+            // 2. 验证密码
+            if (string.IsNullOrEmpty(user.PasswordHash) || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+            {
+                _logger.LogWarning("Login failed: invalid password - {Username}", username);
+                throw new UnauthorizedAccessException("Invalid username or password");
+            }
+
+            // 3. 构建用户信息
+            var userInfo = new UserInfo
+            {
+                Id = user.Id.ToString(),
+                Username = user.Username ?? string.Empty,
+                Name = user.Name,
+                Mobile = user.Mobile,
+                Email = user.Email,
+                Role = user.Role,
+                DeptName = user.DeptId,
+                LoginType = user.LoginType,
+                MustChangePassword = user.MustChangePassword
+            };
+
+            // 4. 生成Token
+            var token = _jwtTokenService.GenerateToken(userInfo);
+            var refreshToken = _jwtTokenService.GenerateRefreshToken();
+
+            // 5. 缓存 refresh token
+            var expirationDays = rememberMe ? 30 : 7;
+            await _cache.SetStringAsync($"refresh_token:{refreshToken}", user.Id.ToString(), new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(expirationDays)
+            });
+
+            _logger.LogInformation("User {UserId} logged in successfully via Password", user.Id);
+
+            return new AuthResult
+            {
+                Token = token,
+                RefreshToken = refreshToken,
+                ExpiresIn = expirationDays * 24 * 60 * 60,
+                User = userInfo
+            };
+        }
+        catch (UnauthorizedAccessException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to handle password login for {Username}", username);
+            throw new Exception("Login failed. Please try again later.");
+        }
+    }
+
+    public async Task<bool> ChangePasswordAsync(Guid userId, string oldPassword, string newPassword)
+    {
+        if (string.IsNullOrWhiteSpace(oldPassword))
+        {
+            throw new ArgumentException("Old password is required", nameof(oldPassword));
+        }
+
+        if (string.IsNullOrWhiteSpace(newPassword))
+        {
+            throw new ArgumentException("New password is required", nameof(newPassword));
+        }
+
+        if (newPassword.Length < 6)
+        {
+            throw new ArgumentException("Password must be at least 6 characters long", nameof(newPassword));
+        }
+
+        try
+        {
+            var user = await _dbContext.Users.FindAsync(userId);
+
+            if (user == null || !user.IsActive)
+            {
+                throw new UnauthorizedAccessException("User not found or inactive");
+            }
+
+            if (user.LoginType != "Password")
+            {
+                throw new InvalidOperationException("Cannot change password for non-password login users");
+            }
+
+            // 验证旧密码
+            if (string.IsNullOrEmpty(user.PasswordHash) || !BCrypt.Net.BCrypt.Verify(oldPassword, user.PasswordHash))
+            {
+                throw new UnauthorizedAccessException("Invalid old password");
+            }
+
+            // 更新密码
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            user.LastPasswordChangeAt = DateTime.UtcNow;
+            user.MustChangePassword = false;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _dbContext.SaveChangesAsync();
+
+            _logger.LogInformation("User {UserId} changed password successfully", userId);
+
+            return true;
+        }
+        catch (Exception ex) when (ex is not UnauthorizedAccessException && ex is not ArgumentException && ex is not InvalidOperationException)
+        {
+            _logger.LogError(ex, "Failed to change password for user {UserId}", userId);
+            throw new Exception("Failed to change password. Please try again later.");
+        }
+    }
+
+    public async Task<bool> ResetPasswordAsync(Guid userId, string newPassword, bool mustChangePassword = true)
+    {
+        if (string.IsNullOrWhiteSpace(newPassword))
+        {
+            throw new ArgumentException("New password is required", nameof(newPassword));
+        }
+
+        if (newPassword.Length < 6)
+        {
+            throw new ArgumentException("Password must be at least 6 characters long", nameof(newPassword));
+        }
+
+        try
+        {
+            var user = await _dbContext.Users.FindAsync(userId);
+
+            if (user == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            if (user.LoginType != "Password")
+            {
+                throw new InvalidOperationException("Cannot reset password for non-password login users");
+            }
+
+            // 重置密码
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            user.LastPasswordChangeAt = DateTime.UtcNow;
+            user.MustChangePassword = mustChangePassword;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _dbContext.SaveChangesAsync();
+
+            _logger.LogInformation("Password reset for user {UserId} by admin", userId);
+
+            return true;
+        }
+        catch (Exception ex) when (ex is not ArgumentException && ex is not InvalidOperationException)
+        {
+            _logger.LogError(ex, "Failed to reset password for user {UserId}", userId);
+            throw new Exception("Failed to reset password. Please try again later.");
         }
     }
 }

@@ -137,6 +137,154 @@ public static class AuthEndpoints
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status500InternalServerError);
+
+        // ========== 用户名密码登录 ==========
+
+        // 用户名密码登录
+        group.MapPost("/login", async (
+            [FromBody] PasswordLoginRequest request,
+            IAuthService authService) =>
+        {
+            try
+            {
+                var result = await authService.PasswordLoginAsync(
+                    request.Username,
+                    request.Password,
+                    request.RememberMe
+                );
+                return Results.Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Results.Unauthorized();
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+        })
+        .WithName("PasswordLogin")
+        .WithSummary("用户名密码登录")
+        .Produces<AuthResult>()
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status500InternalServerError);
+
+        // 修改密码
+        group.MapPost("/change-password", async (
+            HttpContext context,
+            [FromBody] ChangePasswordRequest request,
+            IAuthService authService) =>
+        {
+            var token = ExtractTokenFromHeader(context);
+            if (string.IsNullOrEmpty(token))
+            {
+                return Results.Unauthorized();
+            }
+
+            var user = await authService.GetCurrentUserAsync(token);
+            if (user == null)
+            {
+                return Results.Unauthorized();
+            }
+
+            try
+            {
+                var success = await authService.ChangePasswordAsync(
+                    Guid.Parse(user.Id),
+                    request.OldPassword,
+                    request.NewPassword
+                );
+
+                return Results.Ok(new { success, message = "Password changed successfully" });
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+        })
+        .WithName("ChangePassword")
+        .WithSummary("修改密码")
+        .RequireAuthorization()
+        .Produces<object>()
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status500InternalServerError);
+
+        // 重置密码（管理员操作）
+        group.MapPost("/reset-password", async (
+            HttpContext context,
+            [FromBody] ResetPasswordRequest request,
+            IAuthService authService) =>
+        {
+            var token = ExtractTokenFromHeader(context);
+            if (string.IsNullOrEmpty(token))
+            {
+                return Results.Unauthorized();
+            }
+
+            var user = await authService.GetCurrentUserAsync(token);
+            if (user == null || user.Role != "Admin")
+            {
+                return Results.Forbid();
+            }
+
+            try
+            {
+                var success = await authService.ResetPasswordAsync(
+                    Guid.Parse(request.UserId),
+                    request.NewPassword,
+                    request.MustChangePassword
+                );
+
+                return Results.Ok(new { success, message = "Password reset successfully" });
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+        })
+        .WithName("ResetPassword")
+        .WithSummary("重置密码（管理员操作）")
+        .RequireAuthorization()
+        .Produces<object>()
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status500InternalServerError);
     }
 
     private static string? ExtractTokenFromHeader(HttpContext context)

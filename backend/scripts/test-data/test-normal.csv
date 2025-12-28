@@ -1,0 +1,11 @@
+姓名,身份证号,部门名称,部门号,上级姓名,手机号,邮箱,角色
+李经理,110101198001011111,技术部,DEPT001,,13900001111,lijingli@example.com,SeniorEngineer
+张三,110101199001011234,技术部,DEPT001,李经理,13800138000,zhangsan@example.com,FieldEngineer
+李四,110101199002022345,技术部,DEPT001,李经理,13900139000,lisi@example.com,FieldEngineer
+王经理,110101198002022222,销售部,DEPT002,,13900002222,wangjingli@example.com,SeniorEngineer
+王五,110101199003033456,销售部,DEPT002,王经理,13700137000,wangwu@example.com,CS
+赵六,110101199004044567,客服部,DEPT003,刘总监,13600136000,zhaoliu@example.com,CS
+孙七,110101199005055678,工程部,DEPT004,周经理,13500135000,sunqi@example.com,FieldEngineer
+周八,110101199006066789,工程部,DEPT004,周经理,13400134000,zhouba@example.com,FieldEngineer
+吴九,110101199007077890,技术部,DEPT001,李经理,13300133000,wujiu@example.com,FieldEngineer
+郑十,110101198008088901,管理层,DEPT005,,13200132000,zhengshi@example.com,Admin

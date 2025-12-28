@@ -59,7 +59,7 @@ const AiAnalysisResults: React.FC = () => {
       }
 
       if (user?.role === 'FieldEngineer') {
-        // 工程师只能查看自己的分析结果
+        // 现场工程师只能查看自己的分析结果
         params.engineerId = user.id;
       }
 

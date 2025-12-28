@@ -54,7 +54,15 @@ public static class NewcomerGrowthEndpoints
             }
 
             var targetEngineerId = engineerId ?? userId.Value;
-            // TODO: 验证权限（只能查看自己的，除非是主管）
+
+            // 权限检查：只能查看自己的，除非是主管
+            if (targetEngineerId != userId.Value)
+            {
+                if (!await IsManagerOrAdminAsync(context, userId.Value))
+                {
+                    return Results.Forbid();
+                }
+            }
 
             var start = startDate ?? DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-6));
             var end = endDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
@@ -80,11 +88,16 @@ public static class NewcomerGrowthEndpoints
     {
         try
         {
-            // TODO: 验证用户是否有权限查看团队数据（仅主管可见）
             var userId = GetUserId(context);
             if (userId == null)
             {
                 return Results.Unauthorized();
+            }
+
+            // 权限检查：仅主管可见团队数据
+            if (!await IsManagerOrAdminAsync(context, userId.Value))
+            {
+                return Results.Forbid();
             }
 
             var start = startDate ?? DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-6));
@@ -116,7 +129,15 @@ public static class NewcomerGrowthEndpoints
             }
 
             var targetEngineerId = engineerId ?? userId.Value;
-            // TODO: 验证权限
+
+            // 权限检查：只能查看自己的，除非是主管
+            if (targetEngineerId != userId.Value)
+            {
+                if (!await IsManagerOrAdminAsync(context, userId.Value))
+                {
+                    return Results.Forbid();
+                }
+            }
 
             var milestones = await service.GetGrowthMilestonesAsync(targetEngineerId);
             return Results.Ok(milestones);
@@ -146,7 +167,15 @@ public static class NewcomerGrowthEndpoints
             }
 
             var targetEngineerId = engineerId ?? userId.Value;
-            // TODO: 验证权限
+
+            // 权限检查：只能查看自己的，除非是主管
+            if (targetEngineerId != userId.Value)
+            {
+                if (!await IsManagerOrAdminAsync(context, userId.Value))
+                {
+                    return Results.Forbid();
+                }
+            }
 
             var start = startDate ?? DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-6));
             var end = endDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
@@ -168,6 +197,13 @@ public static class NewcomerGrowthEndpoints
             return null;
         }
         return userId;
+    }
+
+    private static async Task<bool> IsManagerOrAdminAsync(HttpContext context, Guid userId)
+    {
+        var dbContext = context.RequestServices.GetRequiredService<FieldTicket.Infrastructure.Data.ApplicationDbContext>();
+        var user = await dbContext.Users.FindAsync(userId);
+        return user?.Role == "Admin" || user?.Role == "Manager";
     }
 }
 
