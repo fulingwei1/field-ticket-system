@@ -1,5 +1,6 @@
 using FieldTicket.Core.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace FieldTicket.Api.Endpoints;
 
@@ -38,12 +39,16 @@ public static class TicketSearchEndpoints
         [FromQuery] string? deviceSn,
         [FromQuery] DateTime? dateFrom,
         [FromQuery] DateTime? dateTo,
+        HttpContext context,
         ITicketSearchService service,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
         try
         {
+            var userId = GetUserId(context);
+            var userRole = GetUserRole(context);
+
             var request = new SearchRequest
             {
                 Query = q ?? string.Empty,
@@ -58,6 +63,13 @@ public static class TicketSearchEndpoints
                 Page = page,
                 PageSize = pageSize
             };
+
+            // 根据角色过滤搜索结果
+            // FieldEngineer 只能搜索自己创建的工单
+            if (userRole == "FieldEngineer" && userId.HasValue)
+            {
+                request.CreatedBy = userId.Value;
+            }
 
             var result = await service.SearchTicketsAsync(request);
             return Results.Ok(result);
@@ -90,6 +102,22 @@ public static class TicketSearchEndpoints
         {
             return Results.Problem(detail: ex.Message, statusCode: 500);
         }
+    }
+
+    private static Guid? GetUserId(HttpContext context)
+    {
+        var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+        {
+            return null;
+        }
+        return userId;
+    }
+
+    private static string? GetUserRole(HttpContext context)
+    {
+        var roleClaim = context.User.FindFirst(ClaimTypes.Role);
+        return roleClaim?.Value;
     }
 }
 

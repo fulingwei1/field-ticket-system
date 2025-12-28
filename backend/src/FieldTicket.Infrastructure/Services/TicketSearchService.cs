@@ -158,6 +158,11 @@ public class TicketSearchService : ITicketSearchService
             query = query.Where(t => t.DeviceSn == request.DeviceSn);
         }
 
+        if (request.CreatedBy.HasValue)
+        {
+            query = query.Where(t => t.CreatedByUserId == request.CreatedBy.Value);
+        }
+
         if (request.DateFrom.HasValue)
         {
             query = query.Where(t => t.CreatedAt >= request.DateFrom.Value);

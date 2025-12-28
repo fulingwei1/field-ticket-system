@@ -57,6 +57,11 @@ public class SearchRequest
     public string? DeviceSn { get; set; }
 
     /// <summary>
+    /// 创建者ID筛选（用于权限控制）
+    /// </summary>
+    public Guid? CreatedBy { get; set; }
+
+    /// <summary>
     /// 创建时间范围（开始）
     /// </summary>
     public DateTime? DateFrom { get; set; }
