@@ -22,9 +22,11 @@ import {
   UserOutlined,
   KeyOutlined,
   CheckCircleOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { userManagementService, UserDto, UserRole, CreateUserRequest } from '../../services/userManagementService';
 import { employeeImportService } from '../../services/employeeImportService';
+import employeeExportService, { EmployeeExportRequest, ExportPreviewResult } from '../../services/employeeExportService';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -49,6 +51,10 @@ const UserManagement: React.FC = () => {
   const [resetPasswordForm] = Form.useForm();
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [createForm] = Form.useForm<CreateUserRequest>();
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportForm] = Form.useForm<EmployeeExportRequest>();
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportPreview, setExportPreview] = useState<ExportPreviewResult | null>(null);
 
   const roleMap: Record<string, { label: string; color: string; description: string }> = {
     FieldEngineer: { label: '现场工程师', color: 'blue', description: '创建工单、上传证据、验证' },
@@ -179,6 +185,48 @@ const UserManagement: React.FC = () => {
     }
   };
 
+
+  const handleExport = () => {
+    exportForm.resetFields();
+    exportForm.setFieldsValue({ format: 'Excel', includeInactive: false });
+    setExportModalVisible(true);
+    setExportPreview(null);
+  };
+
+  const handleExportPreview = async () => {
+    try {
+      const values = await exportForm.validateFields();
+      setExportLoading(true);
+      const preview = await employeeExportService.previewExportStats(values);
+      setExportPreview(preview);
+    } catch (error: any) {
+      console.error('Failed to preview export:', error);
+      message.error(error.message || '预览失败');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleExportSubmit = async () => {
+    try {
+      const values = await exportForm.validateFields();
+      setExportLoading(true);
+
+      const blob = await employeeExportService.exportEmployees(values);
+      const fileName = employeeExportService.generateFileName(values);
+
+      employeeExportService.downloadFile(blob, fileName);
+
+      message.success(`已导出 ${exportPreview?.totalCount || 0} 条记录`);
+      setExportModalVisible(false);
+      setExportPreview(null);
+    } catch (error: any) {
+      console.error('Failed to export:', error);
+      message.error(error.message || '导出失败');
+    } finally {
+      setExportLoading(false);
+    }
+  };
   const columns = [
     {
       title: '姓名',
@@ -379,6 +427,12 @@ const UserManagement: React.FC = () => {
             onSearch={setSearchQuery}
             enterButton={<SearchOutlined />}
           />
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={handleExport}
+          >
+            导出数据
+          </Button>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -690,6 +744,133 @@ const UserManagement: React.FC = () => {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 导出数据对话框 */}
+      <Modal
+        title="导出员工数据"
+        open={exportModalVisible}
+        onOk={handleExportSubmit}
+        onCancel={() => {
+          setExportModalVisible(false);
+          setExportPreview(null);
+        }}
+        width={700}
+        okText="确认导出"
+        cancelText="取消"
+        confirmLoading={exportLoading}
+        okButtonProps={{ disabled: !exportPreview }}
+      >
+        <div style={{ marginBottom: 16, padding: 12, background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>
+          <div style={{ fontSize: 12, color: '#666' }}>
+            导出员工数据为Excel或CSV格式。可以选择筛选条件导出部分数据。
+          </div>
+        </div>
+
+        <Form
+          form={exportForm}
+          layout="vertical"
+          onValuesChange={handleExportPreview}
+        >
+          <Form.Item
+            label="导出格式"
+            name="format"
+            rules={[{ required: true, message: '请选择导出格式' }]}
+            initialValue="Excel"
+          >
+            <Select>
+              <Option value="Excel">Excel格式 (.xlsx)</Option>
+              <Option value="CSV">CSV格式 (.csv)</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="部门筛选" name="deptName">
+            <Input placeholder="留空表示不限制部门" allowClear />
+          </Form.Item>
+
+          <Form.Item label="角色筛选" name="role">
+            <Select placeholder="留空表示不限制角色" allowClear>
+              {Object.entries(roleMap).map(([key, value]) => (
+                <Option key={key} value={key}>
+                  <Tag color={value.color}>{value.label}</Tag>
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="开通状态" name="isActivated">
+            <Select placeholder="留空表示不限制开通状态" allowClear>
+              <Option value={true}>已开通</Option>
+              <Option value={false}>未开通</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="登录方式" name="loginType">
+            <Select placeholder="留空表示不限制登录方式" allowClear>
+              <Option value="Password">密码登录</Option>
+              <Option value="WeCom">企业微信</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item name="includeInactive" valuePropName="checked" initialValue={false}>
+            <Checkbox>包含已停用账户</Checkbox>
+          </Form.Item>
+        </Form>
+
+        {/* 导出预览统计 */}
+        {exportPreview && (
+          <div style={{ marginTop: 16, padding: 16, background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4 }}>
+            <div style={{ fontWeight: 500, marginBottom: 12, fontSize: 14 }}>导出预览</div>
+            <Space direction="vertical" size={8} style={{ width: '100%' }}>
+              <div>
+                <span style={{ color: '#666' }}>总记录数：</span>
+                <span style={{ fontWeight: 500, fontSize: 16, color: '#1890ff' }}>{exportPreview.totalCount}</span> 条
+              </div>
+              <div>
+                <span style={{ color: '#666' }}>已开通：</span>
+                <Tag color="green">{exportPreview.activatedCount}</Tag>
+                <span style={{ color: '#666', marginLeft: 16 }}>未开通：</span>
+                <Tag color="orange">{exportPreview.inactivatedCount}</Tag>
+              </div>
+
+              {exportPreview.departmentStats.length > 0 && (
+                <div>
+                  <div style={{ color: '#666', marginBottom: 4 }}>部门分布：</div>
+                  <Space wrap>
+                    {exportPreview.departmentStats.slice(0, 5).map(dept => (
+                      <Tag key={dept.deptName}>{dept.deptName} ({dept.count})</Tag>
+                    ))}
+                    {exportPreview.departmentStats.length > 5 && (
+                      <span style={{ color: '#999', fontSize: 12 }}>等{exportPreview.departmentStats.length}个部门</span>
+                    )}
+                  </Space>
+                </div>
+              )}
+
+              {exportPreview.roleStats.length > 0 && (
+                <div>
+                  <div style={{ color: '#666', marginBottom: 4 }}>角色分布：</div>
+                  <Space wrap>
+                    {exportPreview.roleStats.map(role => {
+                      const roleInfo = roleMap[role.role] || { label: role.role, color: 'default' };
+                      return (
+                        <Tag key={role.role} color={roleInfo.color}>
+                          {roleInfo.label} ({role.count})
+                        </Tag>
+                      );
+                    })}
+                  </Space>
+                </div>
+              )}
+            </Space>
+          </div>
+        )}
+
+        {exportLoading && !exportPreview && (
+          <div style={{ textAlign: 'center', padding: 20, color: '#999' }}>
+            加载预览数据中...
+          </div>
+        )}
       </Modal>
     </div>
   );
