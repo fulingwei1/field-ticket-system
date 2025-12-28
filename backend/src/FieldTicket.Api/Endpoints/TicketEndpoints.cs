@@ -196,8 +196,17 @@ public static class TicketEndpoints
             [FromQuery] int pageSize = 20) =>
         {
             var userId = GetUserId(context);
-            
-            // 如果是 FieldEngineer，只能看自己创建的工单
+            var userRole = GetUserRole(context);
+
+            // 根据角色决定是否过滤创建者
+            // Admin 和 Engineer: 可以看到所有工单（除非明确指定了 createdBy）
+            // FieldEngineer: 只能看到自己创建的工单
+            Guid? effectiveCreatedBy = createdBy;
+            if (effectiveCreatedBy == null && userRole == "FieldEngineer")
+            {
+                effectiveCreatedBy = userId; // FieldEngineer 只能看自己的
+            }
+
             var filter = new TicketQueryFilter
             {
                 Statuses = status,
@@ -205,7 +214,7 @@ public static class TicketEndpoints
                 DeviceSn = deviceSn,
                 Domain = domain,
                 Priority = priority,
-                CreatedBy = createdBy ?? userId, // 默认只看自己的
+                CreatedBy = effectiveCreatedBy,
                 DateFrom = dateFrom,
                 DateTo = dateTo
             };
@@ -465,6 +474,12 @@ public static class TicketEndpoints
             return null;
         }
         return userId;
+    }
+
+    private static string? GetUserRole(HttpContext context)
+    {
+        var roleClaim = context.User.FindFirst(ClaimTypes.Role);
+        return roleClaim?.Value;
     }
 }
 
