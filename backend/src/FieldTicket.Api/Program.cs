@@ -154,6 +154,7 @@ builder.Services.AddScoped<IProjectService, FieldTicket.Infrastructure.Services.
 builder.Services.AddScoped<EmployeeExportService>();
 builder.Services.AddScoped<EmployeeUpdateService>();
 builder.Services.AddScoped<OperationLogService>();
+builder.Services.AddScoped<ISolutionRecommendationService, SolutionRecommendationService>();
 
 // 配置角色映射
 var roleMappingConfig = FieldTicket.Infrastructure.WeCom.RoleMappingConfig.LoadFromConfiguration(builder.Configuration);
@@ -199,6 +200,7 @@ app.MapOperationLogEndpoints();
 app.MapTicketEndpoints();
 app.MapTriageEndpoints();
 app.MapSolutionEndpoints();
+app.MapSolutionRecommendationEndpoints();
 app.MapVerificationEndpoints();
 app.MapJudgementCardQualityEndpoints();
 app.MapPerformanceEndpoints();
