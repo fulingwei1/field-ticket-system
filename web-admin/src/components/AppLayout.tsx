@@ -19,6 +19,7 @@ import {
   UploadOutlined,
   CheckCircleOutlined,
   UserAddOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService, UserInfo } from '../services/authService';
@@ -218,6 +219,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           key: '/users/import',
           icon: <UploadOutlined />,
           label: '员工批量导入',
+        },
+        {
+          key: '/users/update',
+          icon: <EditOutlined />,
+          label: '员工批量更新',
         },
         {
           key: '/users/activate',

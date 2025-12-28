@@ -152,6 +152,7 @@ builder.Services.AddScoped<IExcelImportService, FieldTicket.Infrastructure.Servi
 builder.Services.AddScoped<IRootCauseAnalysisService, FieldTicket.Infrastructure.Services.RootCauseAnalysisService>();
 builder.Services.AddScoped<IProjectService, FieldTicket.Infrastructure.Services.ProjectService>();
 builder.Services.AddScoped<EmployeeExportService>();
+builder.Services.AddScoped<EmployeeUpdateService>();
 
 // 配置角色映射
 var roleMappingConfig = FieldTicket.Infrastructure.WeCom.RoleMappingConfig.LoadFromConfiguration(builder.Configuration);
@@ -192,6 +193,7 @@ app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapEmployeeImportEndpoints();
 app.MapEmployeeExportEndpoints();
+app.MapEmployeeUpdateEndpoints();
 app.MapTicketEndpoints();
 app.MapTriageEndpoints();
 app.MapSolutionEndpoints();
