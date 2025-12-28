@@ -53,6 +53,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<RootCauseAnalysis> RootCauseAnalyses { get; set; } = null!;
     public DbSet<MissingInfoConversationHistory> MissingInfoConversationHistories { get; set; } = null!;
     public DbSet<EngineerLoadStat> EngineerLoadStats { get; set; } = null!;
+    public DbSet<OperationLog> OperationLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
