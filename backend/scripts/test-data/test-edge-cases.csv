@@ -1,0 +1,11 @@
+姓名,身份证号,部门名称,部门号,上级姓名,手机号,邮箱,角色
+欧阳娜娜,110101199001011234,技术部,DEPT001,,13800138001,ouyangna@example.com,FieldEngineer
+上官婉儿,110101199002022345,技术部,DEPT001,欧阳娜娜,13900139001,shangguanwan@example.com,FieldEngineer
+李明-华,110101199003033456,销售部,DEPT002,,13700137001,liminghua@example.com,SeniorEngineer
+王&五,110101199004044567,销售部,DEPT002,李明-华,13600136001,wangwu@example.com,CS
+John Smith,110101199005055678,工程部,DEPT003,,13500135001,johnsmith@example.com,FieldEngineer
+张三 (张),110101199006066789,工程部,DEPT003,John Smith,13400134001,zhangsan@example.com,FieldEngineer
+李四（小李）,110101199007077890,客服部,DEPT004,,13300133001,lisi@example.com,CS
+A,110101199008088901,测试部,DEPT005,,13200132001,a@example.com,FieldEngineer
+测试用户超长姓名一二三四五,110101199009099012,测试部,DEPT005,A,13100131001,test@example.com,FieldEngineer
+123,110101199010101123,特殊部,DEPT006,,13000130001,number@example.com,FieldEngineer

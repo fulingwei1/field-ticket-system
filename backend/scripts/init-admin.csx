@@ -80,6 +80,7 @@ try
             ""LoginType"",
             ""PasswordHash"",
             ""IsActive"",
+            ""IsActivated"",
             ""MustChangePassword"",
             ""CreatedAt"",
             ""UpdatedAt""
@@ -92,6 +93,7 @@ try
             @loginType,
             @passwordHash,
             @isActive,
+            @isActivated,
             @mustChangePassword,
             @createdAt,
             @updatedAt
@@ -106,6 +108,7 @@ try
         insertCmd.Parameters.AddWithValue("loginType", "Password");
         insertCmd.Parameters.AddWithValue("passwordHash", passwordHash);
         insertCmd.Parameters.AddWithValue("isActive", true);
+        insertCmd.Parameters.AddWithValue("isActivated", true); // 管理员账户默认已开通
         insertCmd.Parameters.AddWithValue("mustChangePassword", true);
         insertCmd.Parameters.AddWithValue("createdAt", DateTime.UtcNow);
         insertCmd.Parameters.AddWithValue("updatedAt", DateTime.UtcNow);

@@ -20,14 +20,29 @@ ADD COLUMN IF NOT EXISTS "IdCardLastFour" VARCHAR(4);
 
 -- 4. 添加账户开通状态字段
 ALTER TABLE "Users"
-ADD COLUMN IF NOT EXISTS "IsActivated" BOOLEAN NOT NULL DEFAULT false;
+ADD COLUMN IF NOT EXISTS "IsActivated" BOOLEAN DEFAULT false;
 
--- 5. 创建外键约束（上级关系）
+-- 更新已存在行的IsActivated为false（如果为NULL）
+UPDATE "Users" SET "IsActivated" = false WHERE "IsActivated" IS NULL;
+
+-- 设置IsActivated为NOT NULL
 ALTER TABLE "Users"
-ADD CONSTRAINT "FK_Users_Supervisor"
-FOREIGN KEY ("SupervisorId")
-REFERENCES "Users"("Id")
-ON DELETE SET NULL;
+ALTER COLUMN "IsActivated" SET NOT NULL;
+
+-- 5. 创建外键约束（上级关系）- 先检查是否存在
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'FK_Users_Supervisor'
+    ) THEN
+        ALTER TABLE "Users"
+        ADD CONSTRAINT "FK_Users_Supervisor"
+        FOREIGN KEY ("SupervisorId")
+        REFERENCES "Users"("Id")
+        ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- 6. 创建索引
 CREATE INDEX IF NOT EXISTS "IX_Users_SupervisorId"
