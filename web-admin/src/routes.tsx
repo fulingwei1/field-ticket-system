@@ -73,8 +73,6 @@ import { ProtectedRoute, AdminRoute, EngineerRoute } from './components/Protecte
 import TestPage from './pages/TestPage';
 
 export default function AppRoutes() {
-  console.log('🛣️ AppRoutes component rendering...');
-  
   return (
     <Routes>
       {/* 测试页面 */}

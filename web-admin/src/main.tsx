@@ -7,20 +7,14 @@ if (!rootElement) {
   throw new Error('Root element not found');
 }
 
-console.log('🚀 React app starting...');
-console.log('📍 Root element:', rootElement);
-
 try {
-  console.log('📦 Loading App component...');
   const root = ReactDOM.createRoot(rootElement);
-  
+
   root.render(
     <React.StrictMode>
       <App />
     </React.StrictMode>
   );
-  
-  console.log('✅ React app rendered successfully');
 } catch (error) {
   console.error('❌ React app render failed:', error);
   console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');

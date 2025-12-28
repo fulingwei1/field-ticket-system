@@ -3,8 +3,6 @@ import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes';
 
 const App: React.FC = () => {
-  console.log('📱 App component rendering...');
-  
   try {
     return (
       <BrowserRouter>
