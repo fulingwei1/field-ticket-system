@@ -25,6 +25,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService, UserInfo } from '../services/authService';
 import type { MenuProps } from 'antd';
+import { usePermission } from '../hooks/usePermission';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -39,6 +40,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const { canAccessMenu } = usePermission();
 
   useEffect(() => {
     // 检查是否已登录
@@ -72,7 +74,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     navigate('/login');
   };
 
-  const menuItems: MenuProps['items'] = [
+  // 定义所有菜单项
+  const allMenuItems: MenuProps['items'] = [
     {
       key: '/',
       icon: <DashboardOutlined />,
@@ -239,6 +242,37 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       ],
     },
   ];
+
+  // 根据权限过滤菜单项
+  const filterMenuItems = (items: MenuProps['items']): MenuProps['items'] => {
+    if (!items) return [];
+
+    return items
+      .map((item: any) => {
+        if (!item) return null;
+
+        // 检查当前项是否有权限访问
+        const hasAccess = canAccessMenu(item.key);
+        if (!hasAccess) return null;
+
+        // 如果有子菜单，递归过滤
+        if (item.children && item.children.length > 0) {
+          const filteredChildren = filterMenuItems(item.children);
+          // 如果所有子菜单都被过滤掉了，则不显示父菜单
+          if (filteredChildren.length === 0) return null;
+
+          return {
+            ...item,
+            children: filteredChildren,
+          };
+        }
+
+        return item;
+      })
+      .filter(Boolean);
+  };
+
+  const menuItems = filterMenuItems(allMenuItems);
 
   const userMenuItems: MenuProps['items'] = [
     {

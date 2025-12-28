@@ -45,6 +45,7 @@ import EmployeeUpdate from './pages/users/EmployeeUpdate';
 import AccountActivation from './pages/users/AccountActivation';
 import OperationLogs from './pages/users/OperationLogs';
 import AppLayout from './components/AppLayout';
+import { ProtectedRoute, AdminRoute, EngineerRoute } from './components/ProtectedRoute';
 
 /**
  * 路由配置
@@ -94,10 +95,10 @@ export default function AppRoutes() {
 
               {/* 工单相关 */}
               <Route path="/tickets" element={<TicketList />} />
-              <Route path="/tickets/kanban" element={<TicketKanban />} />
+              <Route path="/tickets/kanban" element={<EngineerRoute><TicketKanban /></EngineerRoute>} />
               <Route path="/tickets/new" element={<CreateTicket />} />
               <Route path="/tickets/create" element={<CreateTicket />} />
-              <Route path="/tickets/templates" element={<TicketTemplateList />} />
+              <Route path="/tickets/templates" element={<EngineerRoute><TicketTemplateList /></EngineerRoute>} />
               <Route path="/tickets/:ticketId" element={<TicketDetail />} />
               <Route path="/tickets/:ticketId/triage" element={<TriagePanel />} />
               
@@ -111,9 +112,9 @@ export default function AppRoutes() {
               
               {/* 绩效管理 */}
               <Route path="/performance/my" element={<MyPerformance />} />
-              <Route path="/performance/team" element={<TeamPerformance />} />
-              <Route path="/performance/load-stats" element={<EngineerLoadStats />} />
-              <Route path="/performance/growth-curve" element={<NewcomerGrowthCurve />} />
+              <Route path="/performance/team" element={<EngineerRoute><TeamPerformance /></EngineerRoute>} />
+              <Route path="/performance/load-stats" element={<AdminRoute><EngineerLoadStats /></AdminRoute>} />
+              <Route path="/performance/growth-curve" element={<AdminRoute><NewcomerGrowthCurve /></AdminRoute>} />
               
               {/* AI分析 */}
               <Route path="/ai-analysis" element={<AiAnalysisResults />} />
@@ -123,13 +124,13 @@ export default function AppRoutes() {
               <Route path="/tickets/:ticketId/diagnosis" element={<ConversationalDiagnosis />} />
               
               {/* 置信度校准 */}
-              <Route path="/confidence/calibration" element={<CalibrationDashboard />} />
-              
+              <Route path="/confidence/calibration" element={<AdminRoute><CalibrationDashboard /></AdminRoute>} />
+
               {/* AI辅助归因 */}
               <Route path="/tickets/:ticketId/attribution" element={<AIAttribution />} />
-              
+
               {/* 通知规则配置 */}
-              <Route path="/notification-rules" element={<NotificationRuleConfig />} />
+              <Route path="/notification-rules" element={<AdminRoute><NotificationRuleConfig /></AdminRoute>} />
               
               {/* 判断卡管理 */}
               <Route path="/judgement-cards" element={<JudgementCardList />} />
@@ -138,18 +139,18 @@ export default function AppRoutes() {
 
               {/* 设备管理 */}
               <Route path="/devices" element={<DeviceList />} />
-              <Route path="/devices/config-snapshot" element={<DeviceConfigSnapshot />} />
+              <Route path="/devices/config-snapshot" element={<EngineerRoute><DeviceConfigSnapshot /></EngineerRoute>} />
               <Route path="/devices/qrcode-generator" element={<QRCodeGenerator />} />
 
               {/* 客户管理 */}
               <Route path="/customers" element={<CustomerList />} />
 
-              {/* 用户管理 */}
-              <Route path="/users" element={<UserManagement />} />
-              <Route path="/users/import" element={<EmployeeImport />} />
-              <Route path="/users/update" element={<EmployeeUpdate />} />
-              <Route path="/users/activate" element={<AccountActivation />} />
-              <Route path="/users/logs" element={<OperationLogs />} />
+              {/* 用户管理 - 仅管理员 */}
+              <Route path="/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
+              <Route path="/users/import" element={<AdminRoute><EmployeeImport /></AdminRoute>} />
+              <Route path="/users/update" element={<AdminRoute><EmployeeUpdate /></AdminRoute>} />
+              <Route path="/users/activate" element={<AdminRoute><AccountActivation /></AdminRoute>} />
+              <Route path="/users/logs" element={<AdminRoute><OperationLogs /></AdminRoute>} />
 
               {/* 知识图谱 */}
               <Route path="/knowledge-graph" element={<KnowledgeGraphVisualization />} />
@@ -161,23 +162,23 @@ export default function AppRoutes() {
               {/* 统计分析 */}
               <Route path="/statistics" element={<StatisticsDashboard />} />
               
-              {/* 项目导入 */}
-              <Route path="/projects/excel-import" element={<ExcelImport />} />
-              
+              {/* 项目导入 - 仅管理员 */}
+              <Route path="/projects/excel-import" element={<AdminRoute><ExcelImport /></AdminRoute>} />
+
               {/* 项目管理 */}
               <Route path="/projects" element={<ProjectList />} />
               <Route path="/projects/problems/:problemId" element={<ProblemDetail />} />
-              <Route path="/projects/statistics" element={<ProblemStatistics />} />
-              
+              <Route path="/projects/statistics" element={<EngineerRoute><ProblemStatistics /></EngineerRoute>} />
+
               {/* 整改任务 */}
               <Route path="/corrective-actions" element={<CorrectiveActionList />} />
               <Route path="/corrective-actions/:actionId" element={<CorrectiveActionDetail />} />
-              
-              {/* 用户画像 */}
-              <Route path="/user-profile" element={<UserProfile />} />
-              
-              {/* 智能阈值管理 */}
-              <Route path="/thresholds" element={<ThresholdManagement />} />
+
+              {/* 用户画像 - 仅管理员 */}
+              <Route path="/user-profile" element={<AdminRoute><UserProfile /></AdminRoute>} />
+
+              {/* 智能阈值管理 - 仅管理员 */}
+              <Route path="/thresholds" element={<AdminRoute><ThresholdManagement /></AdminRoute>} />
 
               {/* 404 页面 */}
               <Route path="*" element={<div>404 - 页面未找到</div>} />
