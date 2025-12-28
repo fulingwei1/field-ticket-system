@@ -128,6 +128,9 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.AttributedBy).HasColumnName("attributed_by");
             entity.Property(e => e.AttributedAt).HasColumnName("attributed_at");
 
+            // 标签字段
+            entity.Property(e => e.Tags).HasColumnName("tags").HasColumnType("jsonb");
+
             entity.HasIndex(e => e.TicketNo).IsUnique();
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CustomerId);

@@ -339,11 +339,87 @@ public class TicketBatchService : ITicketBatchService
             TotalCount = ticketIds.Count
         };
 
-        // 如果 Ticket 实体有 Tags 字段（JSONB），可以批量更新标签
-        // 这里暂时返回未实现
-        result.Success = false;
-        result.Message = "批量标记功能暂未实现";
-        result.FailureCount = result.TotalCount;
+        if (tags == null || tags.Count == 0)
+        {
+            result.Success = false;
+            result.Message = "标签列表不能为空";
+            result.FailureCount = result.TotalCount;
+            return result;
+        }
+
+        // 查询所有待标记的工单
+        var tickets = await _dbContext.Tickets
+            .Where(t => ticketIds.Contains(t.TicketId))
+            .ToListAsync();
+
+        if (tickets.Count == 0)
+        {
+            result.Success = false;
+            result.Message = "未找到任何工单";
+            result.FailureCount = result.TotalCount;
+            return result;
+        }
+
+        _logger.LogInformation("开始批量标记 {Count} 个工单，标签: {Tags}",
+            tickets.Count, string.Join(", ", tags));
+
+        foreach (var ticket in tickets)
+        {
+            try
+            {
+                // 合并标签，去重
+                var existingTags = ticket.Tags ?? new List<string>();
+                var newTags = tags.Where(t => !existingTags.Contains(t, StringComparer.OrdinalIgnoreCase)).ToList();
+
+                if (newTags.Count > 0)
+                {
+                    ticket.Tags = existingTags.Concat(newTags).Distinct().ToList();
+                    ticket.UpdatedAt = DateTime.UtcNow;
+
+                    // 记录操作日志
+                    await _operationLogService.LogAsync(
+                        entityType: "Ticket",
+                        entityId: ticket.TicketId.ToString(),
+                        operationType: "BatchTag",
+                        description: $"批量添加标签: {string.Join(", ", newTags)}",
+                        beforeData: existingTags.Count > 0 ? string.Join(", ", existingTags) : "无标签",
+                        afterData: string.Join(", ", ticket.Tags),
+                        operatedBy: userId
+                    );
+
+                    result.SuccessCount++;
+                }
+                else
+                {
+                    // 所有标签已存在，跳过
+                    result.SkippedCount++;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "批量标记工单 {TicketId} 失败", ticket.TicketId);
+                result.Errors.Add(new BatchOperationError
+                {
+                    TicketId = ticket.TicketId,
+                    TicketNo = ticket.TicketNo ?? "未生成",
+                    ErrorMessage = ex.Message
+                });
+                result.FailureCount++;
+            }
+        }
+
+        if (result.SuccessCount > 0)
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+
+        result.Success = result.FailureCount == 0;
+        result.Message = result.Success
+            ? $"成功标记 {result.SuccessCount} 个工单" + (result.SkippedCount > 0 ? $"，跳过 {result.SkippedCount} 个（标签已存在）" : "")
+            : $"成功标记 {result.SuccessCount} 个工单，失败 {result.FailureCount} 个";
+
+        _logger.LogInformation("批量标记完成: 总数={Total}, 成功={Success}, 跳过={Skipped}, 失败={Failure}",
+            result.TotalCount, result.SuccessCount, result.SkippedCount, result.FailureCount);
 
         return result;
     }

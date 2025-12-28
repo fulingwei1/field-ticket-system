@@ -94,6 +94,7 @@ public class TicketDto
     public DateTime? SubmittedAt { get; set; }
     public DateTime? ClosedAt { get; set; }
     public int AttachmentCount { get; set; }
+    public List<string> Tags { get; set; } = new();
 }
 
 /// <summary>
@@ -113,6 +114,7 @@ public class TicketListItemDto
     public string CreatedByName { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public DateTime? SubmittedAt { get; set; }
+    public List<string> Tags { get; set; } = new();
 }
 
 /// <summary>

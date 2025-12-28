@@ -439,7 +439,8 @@ public class TicketService : ITicketService
             Priority = t.Priority,
             CreatedByName = userDict.TryGetValue(t.CreatedByUserId, out var userName) ? userName : string.Empty,
             CreatedAt = t.CreatedAt,
-            SubmittedAt = t.SubmittedAt
+            SubmittedAt = t.SubmittedAt,
+            Tags = t.Tags ?? new List<string>()
         }).ToList();
 
         return (items, total);
@@ -507,7 +508,8 @@ public class TicketService : ITicketService
             UpdatedAt = ticket.UpdatedAt,
             SubmittedAt = ticket.SubmittedAt,
             ClosedAt = ticket.ClosedAt,
-            AttachmentCount = attachmentCount
+            AttachmentCount = attachmentCount,
+            Tags = ticket.Tags ?? new List<string>()
         };
     }
 }

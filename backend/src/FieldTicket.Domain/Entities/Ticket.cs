@@ -87,6 +87,9 @@ public class Ticket
     public string? MergeReason { get; set; } // 合并原因
     public Guid? MergedBy { get; set; } // 合并操作人
     public DateTime? MergedAt { get; set; } // 合并时间
+
+    // 标签（用于批量标记和分类）
+    public List<string> Tags { get; set; } = new(); // 标签列表，存储为JSONB
 }
 
 
