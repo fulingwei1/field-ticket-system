@@ -43,6 +43,7 @@ import UserManagement from './pages/users/UserManagement';
 import EmployeeImport from './pages/users/EmployeeImport';
 import EmployeeUpdate from './pages/users/EmployeeUpdate';
 import AccountActivation from './pages/users/AccountActivation';
+import OperationLogs from './pages/users/OperationLogs';
 import AppLayout from './components/AppLayout';
 
 /**
@@ -148,6 +149,7 @@ export default function AppRoutes() {
               <Route path="/users/import" element={<EmployeeImport />} />
               <Route path="/users/update" element={<EmployeeUpdate />} />
               <Route path="/users/activate" element={<AccountActivation />} />
+              <Route path="/users/logs" element={<OperationLogs />} />
 
               {/* 知识图谱 */}
               <Route path="/knowledge-graph" element={<KnowledgeGraphVisualization />} />

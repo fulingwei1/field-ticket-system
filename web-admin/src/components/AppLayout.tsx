@@ -20,6 +20,7 @@ import {
   CheckCircleOutlined,
   UserAddOutlined,
   EditOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService, UserInfo } from '../services/authService';
@@ -229,6 +230,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           key: '/users/activate',
           icon: <CheckCircleOutlined />,
           label: '账户开通审核',
+        },
+        {
+          key: '/users/logs',
+          icon: <HistoryOutlined />,
+          label: '操作日志',
         },
       ],
     },
