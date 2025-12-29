@@ -14,10 +14,11 @@ import {
   Alert,
   Spin,
 } from 'antd';
-import { SaveOutlined, SendOutlined, WarningOutlined, DiffOutlined } from '@ant-design/icons';
+import { SaveOutlined, SendOutlined, WarningOutlined, DiffOutlined, RobotOutlined } from '@ant-design/icons';
 import { ticketService, CreateTicketRequest, ValidationError } from '../../services/ticketService';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MissingInfoQuestionnaire } from '../../components/tickets/MissingInfoQuestionnaire';
+import { GuidedTicketCreation } from '../../components/tickets/GuidedTicketCreation';
 import { ticketTemplateService } from '../../services/ticketTemplateService';
 import { deviceConfigSnapshotService, ConfigDifference } from '../../services/deviceConfigSnapshotService';
 import { customerService, CustomerDto } from '../../services/customerService';
@@ -43,16 +44,21 @@ const CreateTicket: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [domain, setDomain] = useState<string>('');
+  const [useGuidedMode, setUseGuidedMode] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const templateId = searchParams.get('templateId');
+  const guidedMode = searchParams.get('guided') === 'true';
 
-  // 从模板加载数据
+  // 从模板加载数据或启用引导模式
   useEffect(() => {
     if (templateId) {
       loadTemplate(templateId);
     }
-  }, [templateId]);
+    if (guidedMode) {
+      setUseGuidedMode(true);
+    }
+  }, [templateId, guidedMode]);
 
   const loadTemplate = async (id: string) => {
     try {
@@ -223,10 +229,41 @@ const CreateTicket: React.FC = () => {
     };
   };
 
+  // 如果使用引导模式，显示引导式创建组件
+  if (useGuidedMode) {
+    return (
+      <div style={{ padding: '24px' }}>
+        <Card>
+          <Space style={{ marginBottom: '16px' }}>
+            <Button onClick={() => setUseGuidedMode(false)}>切换到传统模式</Button>
+          </Space>
+          <GuidedTicketCreation
+            onComplete={(ticketId) => {
+              message.success('工单创建成功！');
+              navigate(`/tickets/${ticketId}`);
+            }}
+            onCancel={() => {
+              setUseGuidedMode(false);
+            }}
+          />
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <Card>
-        <h2>创建工单</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h2 style={{ margin: 0 }}>创建工单</h2>
+          <Button
+            type="primary"
+            icon={<RobotOutlined />}
+            onClick={() => setUseGuidedMode(true)}
+          >
+            使用AI引导创建
+          </Button>
+        </div>
         <Steps current={currentStep} style={{ marginBottom: '32px' }}>
           {steps.map((step, index) => (
             <Step key={index} title={step.title} />

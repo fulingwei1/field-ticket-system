@@ -15,13 +15,12 @@ import {
   Tag,
   Alert,
   Rate,
+  List,
 } from 'antd';
-import { ArrowLeftOutlined, CheckOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CheckOutlined, ReloadOutlined } from '@ant-design/icons';
 import { triageService, JudgementCardDto, TriageTicketRequest } from '../../services/triageService';
 import { ticketService, TicketDto } from '../../services/ticketService';
 import { judgementCardRecommendationService, JudgementCardRecommendationDto } from '../../services/judgementCardRecommendationService';
-import AIAssistedTriagePanel from '../../components/ai/AIAssistedTriagePanel';
-import { AIAssistedTriageResult } from '../../services/aiAssistedTriageService';
 import AIAssistedTriagePanel from '../../components/ai/AIAssistedTriagePanel';
 import { AIAssistedTriageResult } from '../../services/aiAssistedTriageService';
 
@@ -58,7 +57,7 @@ export default function TriagePanel() {
       setLoadingTicket(true);
       const ticketData = await ticketService.getTicket(ticketId);
       setTicket(ticketData);
-      
+
       // 验证工单状态
       if (ticketData.status !== 'Submitted') {
         message.warning('只能对 Submitted 状态的工单进行分诊');
@@ -111,7 +110,7 @@ export default function TriagePanel() {
     try {
       const jc = await triageService.getJudgementCard(jcCode);
       setSelectedJc(jc);
-      
+
       // 如果判断卡有模板，自动填充
       if (jc.hypothesisTemplate) {
         form.setFieldsValue({ currentHypothesis: jc.hypothesisTemplate });
@@ -126,7 +125,7 @@ export default function TriagePanel() {
 
   const handleSubmit = async (values: TriageTicketRequest) => {
     if (!ticketId) return;
-    
+
     try {
       setLoading(true);
       const result = await triageService.triageTicket(ticketId, {
@@ -275,7 +274,7 @@ export default function TriagePanel() {
                         {rec.matchReasons.length > 0 && (
                           <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
                             {rec.matchReasons.map((reason, idx) => (
-                              <Tag key={idx} size="small" style={{ marginRight: '4px' }}>
+                              <Tag key={idx} style={{ marginRight: '4px', fontSize: '11px' }}>
                                 {reason}
                               </Tag>
                             ))}

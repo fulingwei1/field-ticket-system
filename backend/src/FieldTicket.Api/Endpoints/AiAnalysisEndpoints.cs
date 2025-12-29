@@ -286,6 +286,161 @@ public static class AiAnalysisEndpoints
         .Produces<AiAnalysisResultDto>()
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status403Forbidden);
+
+        // 分析工程师技能水平
+        group.MapPost("/skill-level", async (
+            [FromBody] AnalyzeSkillLevelRequest request,
+            HttpContext context,
+            IAiAnalysisService aiAnalysisService) =>
+        {
+            var userId = GetUserId(context);
+            if (userId == null)
+            {
+                return Results.Unauthorized();
+            }
+
+            // 权限检查：工程师只能分析自己的技能水平
+            if (request.EngineerId != userId.Value)
+            {
+                var user = await GetCurrentUserAsync(context, userId.Value);
+                if (user?.Role != "Manager" && user?.Role != "Admin")
+                {
+                    return Results.Forbid();
+                }
+            }
+
+            try
+            {
+                var result = await aiAnalysisService.AnalyzeSkillLevelAsync(
+                    request.EngineerId,
+                    request.PeriodType,
+                    request.PeriodStart,
+                    userId);
+
+                return Results.Ok(new { success = true, result });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Results.NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+        })
+        .WithName("AnalyzeSkillLevel")
+        .WithSummary("分析工程师技能水平")
+        .Produces<object>()
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound);
+
+        // 生成工程师发展建议
+        group.MapPost("/development-suggestion", async (
+            [FromBody] GenerateDevelopmentSuggestionRequest request,
+            HttpContext context,
+            IAiAnalysisService aiAnalysisService) =>
+        {
+            var userId = GetUserId(context);
+            if (userId == null)
+            {
+                return Results.Unauthorized();
+            }
+
+            // 权限检查：工程师只能生成自己的发展建议
+            if (request.EngineerId != userId.Value)
+            {
+                var user = await GetCurrentUserAsync(context, userId.Value);
+                if (user?.Role != "Manager" && user?.Role != "Admin")
+                {
+                    return Results.Forbid();
+                }
+            }
+
+            try
+            {
+                var result = await aiAnalysisService.GenerateDevelopmentSuggestionAsync(
+                    request.EngineerId,
+                    request.PeriodType,
+                    request.PeriodStart,
+                    userId);
+
+                return Results.Ok(new { success = true, result });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Results.NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+        })
+        .WithName("GenerateDevelopmentSuggestion")
+        .WithSummary("生成工程师发展建议")
+        .Produces<object>()
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound);
+
+        // 生成综合绩效评价
+        group.MapPost("/performance-evaluation", async (
+            [FromBody] GeneratePerformanceEvaluationRequest request,
+            HttpContext context,
+            IAiAnalysisService aiAnalysisService) =>
+        {
+            var userId = GetUserId(context);
+            if (userId == null)
+            {
+                return Results.Unauthorized();
+            }
+
+            // 权限检查：工程师只能生成自己的绩效评价
+            if (request.EngineerId != userId.Value)
+            {
+                var user = await GetCurrentUserAsync(context, userId.Value);
+                if (user?.Role != "Manager" && user?.Role != "Admin")
+                {
+                    return Results.Forbid();
+                }
+            }
+
+            try
+            {
+                var result = await aiAnalysisService.GeneratePerformanceEvaluationAsync(
+                    request.EngineerId,
+                    request.PeriodType,
+                    request.PeriodStart,
+                    userId);
+
+                return Results.Ok(new { success = true, result });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Results.NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status500InternalServerError
+                );
+            }
+        })
+        .WithName("GeneratePerformanceEvaluation")
+        .WithSummary("生成综合绩效评价")
+        .Produces<object>()
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status400BadRequest);
     }
 
     private static Guid? GetUserId(HttpContext context)

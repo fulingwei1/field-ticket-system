@@ -1,6 +1,6 @@
 import { authService } from '../services/authService';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 /**
  * 统一的请求工具
@@ -149,6 +149,8 @@ class Request {
 }
 
 export const request = new Request();
+
+
 
 
 

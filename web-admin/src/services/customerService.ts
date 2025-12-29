@@ -1,6 +1,6 @@
 import { authService } from './authService';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export interface CustomerDto {
   customerId: string; // Backend returns Guid, will be serialized as string
@@ -41,13 +41,13 @@ class CustomerService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     // 直接使用 authService.getAuthHeaders()，与 ticketService 保持一致
     const headers = authService.getAuthHeaders();
-    
+
     // 合并用户提供的 headers
     const finalHeaders = {
       ...headers,
       ...(options.headers || {}),
     };
-    
+
     console.log('[CustomerService] Making request to:', `${API_BASE_URL}${endpoint}`);
     console.log('[CustomerService] Headers:', {
       hasAuthorization: !!finalHeaders.Authorization,
@@ -128,6 +128,3 @@ class CustomerService {
 }
 
 export const customerService = new CustomerService();
-
-
-帮我完善设备的客户和项目的数据bang帮我重新启动一下项目

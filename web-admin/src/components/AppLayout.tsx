@@ -95,10 +95,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           key: '/devices/config-snapshot',
           label: '配置快照',
         },
-        {
-          key: '/devices/qrcode-generator',
-          label: '二维码生成',
-        },
       ],
     },
     {

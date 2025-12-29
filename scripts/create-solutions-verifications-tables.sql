@@ -145,3 +145,5 @@ COMMENT ON TABLE solutions IS '解决方案表';
 COMMENT ON TABLE verifications IS '验证表';
 
 
+
+

@@ -84,3 +84,5 @@ CREATE INDEX IF NOT EXISTS idx_attachments_ticket_id ON attachments(ticket_id);
 
 
 
+
+

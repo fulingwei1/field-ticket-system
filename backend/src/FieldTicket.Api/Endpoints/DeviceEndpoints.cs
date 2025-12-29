@@ -34,14 +34,14 @@ public static class DeviceEndpoints
     /// 获取设备列表
     /// </summary>
     private static async Task<IResult> GetDevices(
-        IDeviceService service = null!,
-        [FromQuery] Guid? projectId = null,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50)
+        [FromQuery] Guid? projectId,
+        [FromQuery] int page,
+        [FromQuery] int pageSize,
+        IDeviceService service)
     {
         try
         {
-            var devices = await service.GetDevicesAsync(page, pageSize, projectId);
+            var devices = await service.GetDevicesAsync(page > 0 ? page : 1, pageSize > 0 ? pageSize : 50, projectId);
             return Results.Ok(devices);
         }
         catch (Exception ex)
@@ -55,7 +55,7 @@ public static class DeviceEndpoints
     /// </summary>
     private static async Task<IResult> GetDevice(
         Guid deviceId,
-        IDeviceService service = null!)
+        IDeviceService service)
     {
         try
         {
@@ -76,15 +76,15 @@ public static class DeviceEndpoints
     /// 搜索设备
     /// </summary>
     private static async Task<IResult> SearchDevices(
-        [FromQuery] string keyword,
-        IDeviceService service = null!,
-        [FromQuery] Guid? projectId = null,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50)
+        [FromQuery] string? keyword,
+        [FromQuery] Guid? projectId,
+        [FromQuery] int page,
+        [FromQuery] int pageSize,
+        IDeviceService service)
     {
         try
         {
-            var devices = await service.SearchDevicesAsync(keyword, page, pageSize, projectId);
+            var devices = await service.SearchDevicesAsync(keyword ?? string.Empty, page > 0 ? page : 1, pageSize > 0 ? pageSize : 50, projectId);
             return Results.Ok(devices);
         }
         catch (Exception ex)

@@ -55,6 +55,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<RootCauseAnalysis> RootCauseAnalyses { get; set; } = null!;
     public DbSet<MissingInfoConversationHistory> MissingInfoConversationHistories { get; set; } = null!;
     public DbSet<EngineerLoadStat> EngineerLoadStats { get; set; } = null!;
+    public DbSet<GuidedTicketSession> GuidedTicketSessions { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -1087,6 +1088,37 @@ public class ApplicationDbContext : DbContext
 
             entity.HasIndex(e => new { e.EngineerId, e.StatDate }).IsUnique().HasDatabaseName("idx_els_engineer_date");
             entity.HasIndex(e => e.StatDate).HasDatabaseName("idx_els_stat_date");
+        });
+
+        // GuidedTicketSession 实体配置
+        modelBuilder.Entity<GuidedTicketSession>(entity =>
+        {
+            entity.ToTable("guided_ticket_sessions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.UserId).HasColumnName("user_id").IsRequired();
+            entity.Property(e => e.TicketId).HasColumnName("ticket_id");
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(20).IsRequired().HasDefaultValue("collecting");
+            entity.Property(e => e.TurnCount).HasColumnName("turn_count").HasDefaultValue(0);
+            entity.Property(e => e.MaxTurns).HasColumnName("max_turns").HasDefaultValue(3);
+            entity.Property(e => e.InitialText).HasColumnName("initial_text").HasColumnType("text");
+            entity.Property(e => e.ImageAttachmentIds).HasColumnName("image_attachment_ids").HasColumnType("uuid[]");
+            entity.Property(e => e.TextAnalysis).HasColumnName("text_analysis").HasColumnType("jsonb");
+            entity.Property(e => e.ImageAnalyses).HasColumnName("image_analyses").HasColumnType("jsonb[]");
+            entity.Property(e => e.ComprehensiveAnalysis).HasColumnName("comprehensive_analysis").HasColumnType("jsonb");
+            entity.Property(e => e.ConversationHistory).HasColumnName("conversation_history").HasColumnType("jsonb").IsRequired().HasDefaultValue("[]");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()");
+            entity.Property(e => e.CompletedAt).HasColumnName("completed_at");
+
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.UserId).HasDatabaseName("idx_guided_sessions_user_id");
+            entity.HasIndex(e => e.Status).HasDatabaseName("idx_guided_sessions_status");
+            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("idx_guided_sessions_created_at");
         });
 
         // Project 实体配置

@@ -14,6 +14,7 @@ import {
   Space,
   Typography,
   Button,
+  Modal,
 } from 'antd';
 import {
   TrophyOutlined,
@@ -21,9 +22,13 @@ import {
   ClockCircleOutlined,
   UserOutlined,
   CalculatorOutlined,
+  RobotOutlined,
+  BulbOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { performanceService, PerformanceMetricsDto, PerformanceTrendDto } from '../../services/performanceService';
 import { authService } from '../../services/authService';
+import { aiAnalysisService, SkillLevelAnalysisDto, DevelopmentSuggestionDto, PerformanceEvaluationDto } from '../../services/aiAnalysisService';
 import dayjs, { Dayjs } from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -38,6 +43,10 @@ const MyPerformance: React.FC = () => {
 
   const user = authService.getUser();
   const [calculating, setCalculating] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [skillAnalysis, setSkillAnalysis] = useState<SkillLevelAnalysisDto | null>(null);
+  const [developmentSuggestion, setDevelopmentSuggestion] = useState<DevelopmentSuggestionDto | null>(null);
+  const [performanceEvaluation, setPerformanceEvaluation] = useState<PerformanceEvaluationDto | null>(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -130,6 +139,189 @@ const MyPerformance: React.FC = () => {
       }
     } finally {
       setCalculating(false);
+    }
+  };
+
+  const handleAnalyzeSkillLevel = async () => {
+    if (!user?.id) return;
+
+    setAnalyzing(true);
+    try {
+      const periodStartStr = periodStart.format('YYYY-MM-DD');
+      const result = await aiAnalysisService.analyzeSkillLevel({
+        engineerId: user.id,
+        periodType,
+        periodStart: periodStartStr,
+      });
+      setSkillAnalysis(result.result);
+      Modal.info({
+        title: '技能水平分析',
+        width: 800,
+        content: (
+          <div>
+            <p><strong>总体技能水平：</strong>{result.result.overallSkillLevel}</p>
+            <p><strong>技能评分：</strong>{result.result.skillScore.toFixed(1)}分</p>
+            <p><strong>分析总结：</strong></p>
+            <p style={{ whiteSpace: 'pre-wrap' }}>{result.result.summary}</p>
+            <p><strong>关键优势：</strong></p>
+            <ul>
+              {result.result.strengths.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ul>
+            <p><strong>需要改进的领域：</strong></p>
+            <ul>
+              {result.result.improvementAreas.map((a, i) => (
+                <li key={i}>{a}</li>
+              ))}
+            </ul>
+          </div>
+        ),
+      });
+    } catch (error: any) {
+      message.error(`分析技能水平失败: ${error.message || '未知错误'}`);
+      console.error('Failed to analyze skill level:', error);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleGenerateDevelopmentSuggestion = async () => {
+    if (!user?.id) return;
+
+    setAnalyzing(true);
+    try {
+      const periodStartStr = periodStart.format('YYYY-MM-DD');
+      const result = await aiAnalysisService.generateDevelopmentSuggestion({
+        engineerId: user.id,
+        periodType,
+        periodStart: periodStartStr,
+      });
+      setDevelopmentSuggestion(result.result);
+      Modal.info({
+        title: '个人发展建议',
+        width: 900,
+        content: (
+          <div>
+            <p><strong>个人发展特点：</strong></p>
+            <p style={{ whiteSpace: 'pre-wrap' }}>{result.result.developmentCharacteristics}</p>
+            <p><strong>发展建议：</strong></p>
+            {result.result.suggestions.map((s, i) => (
+              <div key={i} style={{ marginBottom: '16px', padding: '12px', background: '#f5f5f5', borderRadius: '4px' }}>
+                <p><strong>{s.title}</strong> ({s.category}) - 优先级: {s.priority === 'high' ? '高' : s.priority === 'medium' ? '中' : '低'}</p>
+                <p>{s.description}</p>
+                <p><strong>行动项：</strong></p>
+                <ul>
+                  {s.actionItems.map((item, j) => (
+                    <li key={j}>{item}</li>
+                  ))}
+                </ul>
+                <p><strong>预期成果：</strong>{s.expectedOutcome}</p>
+              </div>
+            ))}
+            <p><strong>短期目标（3个月）：</strong></p>
+            <ul>
+              {result.result.shortTermGoals.map((g, i) => (
+                <li key={i}>{g}</li>
+              ))}
+            </ul>
+            <p><strong>中期目标（6-12个月）：</strong></p>
+            <ul>
+              {result.result.mediumTermGoals.map((g, i) => (
+                <li key={i}>{g}</li>
+              ))}
+            </ul>
+            <p><strong>长期目标（1-2年）：</strong></p>
+            <ul>
+              {result.result.longTermGoals.map((g, i) => (
+                <li key={i}>{g}</li>
+              ))}
+            </ul>
+            <p><strong>推荐资源：</strong></p>
+            <ul>
+              {result.result.recommendedResources.map((r, i) => (
+                <li key={i}>{r}</li>
+              ))}
+            </ul>
+          </div>
+        ),
+      });
+    } catch (error: any) {
+      message.error(`生成发展建议失败: ${error.message || '未知错误'}`);
+      console.error('Failed to generate development suggestion:', error);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleGeneratePerformanceEvaluation = async () => {
+    if (!user?.id) return;
+
+    setAnalyzing(true);
+    try {
+      const periodStartStr = periodStart.format('YYYY-MM-DD');
+      const result = await aiAnalysisService.generatePerformanceEvaluation({
+        engineerId: user.id,
+        periodType,
+        periodStart: periodStartStr,
+      });
+      setPerformanceEvaluation(result.result);
+      Modal.info({
+        title: '综合绩效评价',
+        width: 900,
+        content: (
+          <div>
+            <p><strong>绩效等级：</strong>{result.result.performanceLevel}</p>
+            <p><strong>综合评分：</strong>{result.result.overallScore.toFixed(1)}分</p>
+            <p><strong>评价总结：</strong></p>
+            <p style={{ whiteSpace: 'pre-wrap' }}>{result.result.evaluationSummary}</p>
+            <p><strong>工作亮点：</strong></p>
+            <ul>
+              {result.result.highlights.map((h, i) => (
+                <li key={i}>{h}</li>
+              ))}
+            </ul>
+            <p><strong>需要改进的方面：</strong></p>
+            <ul>
+              {result.result.areasForImprovement.map((a, i) => (
+                <li key={i}>{a}</li>
+              ))}
+            </ul>
+            {result.result.comparison && (
+              <>
+                <p><strong>与团队平均水平对比：</strong></p>
+                <p>团队平均分：{result.result.comparison.teamAverageScore.toFixed(1)}分</p>
+                <p>{result.result.comparison.comparisonSummary}</p>
+                {result.result.comparison.advantages.length > 0 && (
+                  <>
+                    <p><strong>相对优势：</strong></p>
+                    <ul>
+                      {result.result.comparison.advantages.map((a, i) => (
+                        <li key={i}>{a}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {result.result.comparison.gaps.length > 0 && (
+                  <>
+                    <p><strong>与平均水平的差距：</strong></p>
+                    <ul>
+                      {result.result.comparison.gaps.map((g, i) => (
+                        <li key={i}>{g}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        ),
+      });
+    } catch (error: any) {
+      message.error(`生成绩效评价失败: ${error.message || '未知错误'}`);
+      console.error('Failed to generate performance evaluation:', error);
+    } finally {
+      setAnalyzing(false);
     }
   };
 
@@ -289,6 +481,30 @@ const MyPerformance: React.FC = () => {
             onChange={(date) => date && setPeriodStart(date)}
             format={periodType === 'monthly' ? 'YYYY-MM' : periodType === 'yearly' ? 'YYYY' : 'YYYY-MM-DD'}
           />
+          <Button
+            type="primary"
+            icon={<RobotOutlined />}
+            onClick={handleAnalyzeSkillLevel}
+            loading={analyzing}
+          >
+            技能水平分析
+          </Button>
+          <Button
+            type="default"
+            icon={<BulbOutlined />}
+            onClick={handleGenerateDevelopmentSuggestion}
+            loading={analyzing}
+          >
+            发展建议
+          </Button>
+          <Button
+            type="default"
+            icon={<FileTextOutlined />}
+            onClick={handleGeneratePerformanceEvaluation}
+            loading={analyzing}
+          >
+            绩效评价
+          </Button>
         </Space>
       </div>
 

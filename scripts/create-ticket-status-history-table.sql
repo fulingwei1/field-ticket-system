@@ -63,3 +63,5 @@ COMMENT ON COLUMN ticket_status_history.related_entity_type IS '关联实体类�
 COMMENT ON COLUMN ticket_status_history.notes IS '备注';
 
 
+
+

@@ -32,11 +32,12 @@ public static class CustomerEndpoints
     private static async Task<IResult> GetCustomers(
         ICustomerService service,
         HttpContext context,
-        ILogger? logger = null,
+        ILoggerFactory loggerFactory,
         [FromQuery] string? search = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 100)
     {
+        var logger = loggerFactory.CreateLogger("CustomerEndpoints");
         try
         {
             // 记录认证信息用于调试

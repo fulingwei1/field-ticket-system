@@ -13,16 +13,19 @@ import {
   Modal,
   Descriptions,
   Typography,
+  Tooltip,
 } from 'antd';
 import {
   SearchOutlined,
   EyeOutlined,
   ReloadOutlined,
   SettingOutlined,
+  QrcodeOutlined,
 } from '@ant-design/icons';
 import { deviceService, DeviceDto } from '../../services/deviceService';
 import { customerService } from '../../services/customerService';
 import { projectService } from '../../services/projectService';
+import DeviceQRCodeModal from '../../components/DeviceQRCodeModal';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -35,7 +38,8 @@ export default function DeviceList() {
   const [pageSize, setPageSize] = useState(20);
   const [selectedDevice, setSelectedDevice] = useState<DeviceDto | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+
   // 筛选条件
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | undefined>();
@@ -120,12 +124,18 @@ export default function DeviceList() {
     }
   };
 
+  const handleShowQRCode = (device: DeviceDto) => {
+    setSelectedDevice(device);
+    setQrModalVisible(true);
+  };
+
   const columns = [
     {
       title: '设备SN',
       dataIndex: 'deviceSn',
       key: 'deviceSn',
       width: 150,
+      render: (text: string) => <Text copyable>{text}</Text>,
     },
     {
       title: '设备名称',
@@ -164,17 +174,24 @@ export default function DeviceList() {
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 150,
       fixed: 'right' as const,
       render: (_: any, record: DeviceDto) => (
         <Space>
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => handleViewDetail(record)}
-          >
-            查看
-          </Button>
+          <Tooltip title="查看详情">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewDetail(record)}
+            />
+          </Tooltip>
+          <Tooltip title="设备二维码">
+            <Button
+              type="text"
+              icon={<QrcodeOutlined />}
+              onClick={() => handleShowQRCode(record)}
+            />
+          </Tooltip>
         </Space>
       ),
     },
@@ -288,8 +305,17 @@ export default function DeviceList() {
           </Descriptions>
         )}
       </Modal>
+
+      {/* 二维码模态框 */}
+      <DeviceQRCodeModal
+        visible={qrModalVisible}
+        onCancel={() => setQrModalVisible(false)}
+        device={selectedDevice}
+      />
     </div>
   );
 }
+
+
 
 

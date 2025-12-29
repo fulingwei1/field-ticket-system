@@ -4,7 +4,7 @@
 import { authService } from './authService';
 import { CreateTicketRequest } from './ticketService';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export interface TicketTemplateDto {
   templateId: string;
@@ -186,6 +186,8 @@ class TicketTemplateService {
 }
 
 export const ticketTemplateService = new TicketTemplateService();
+
+
 
 
 

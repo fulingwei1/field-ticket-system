@@ -52,6 +52,33 @@ public interface IAiAnalysisService
     /// 获取分析结果详情
     /// </summary>
     Task<AiAnalysisResultDto?> GetAnalysisResultAsync(Guid analysisId);
+
+    /// <summary>
+    /// 分析工程师技能水平
+    /// </summary>
+    Task<SkillLevelAnalysisDto> AnalyzeSkillLevelAsync(
+        Guid engineerId,
+        string periodType,
+        DateOnly periodStart,
+        Guid? createdBy = null);
+
+    /// <summary>
+    /// 生成工程师发展建议
+    /// </summary>
+    Task<DevelopmentSuggestionDto> GenerateDevelopmentSuggestionAsync(
+        Guid engineerId,
+        string periodType,
+        DateOnly periodStart,
+        Guid? createdBy = null);
+
+    /// <summary>
+    /// 生成综合绩效评价
+    /// </summary>
+    Task<PerformanceEvaluationDto> GeneratePerformanceEvaluationAsync(
+        Guid engineerId,
+        string periodType,
+        DateOnly periodStart,
+        Guid? createdBy = null);
 }
 
 /// <summary>

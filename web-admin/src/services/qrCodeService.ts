@@ -1,6 +1,6 @@
 import { authService } from './authService';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export interface GenerateQRCodeResponse {
   qrCode: string; // Base64 图片
@@ -83,6 +83,8 @@ class QRCodeService {
 }
 
 export const qrCodeService = new QRCodeService();
+
+
 
 
 

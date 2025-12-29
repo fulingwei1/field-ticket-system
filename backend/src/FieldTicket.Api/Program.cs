@@ -114,9 +114,14 @@ builder.Services.AddScoped<IAiAnalysisService, FieldTicket.Infrastructure.Servic
 builder.Services.AddScoped<IConversationalDiagnosisService, FieldTicket.Infrastructure.Services.ConversationalDiagnosisService>();
 builder.Services.AddScoped<IMissingInfoAnalysisService, FieldTicket.Infrastructure.Services.MissingInfoAnalysisService>();
 builder.Services.AddScoped<IAIDeepAnalysisService, FieldTicket.Infrastructure.Services.AIDeepAnalysisService>();
+builder.Services.AddScoped<FieldTicket.Core.Services.IMultimodalAIService, FieldTicket.Infrastructure.Services.MultimodalAIService>();
+builder.Services.AddScoped<FieldTicket.Core.Services.IGuidedTicketCreationService, FieldTicket.Infrastructure.Services.GuidedTicketCreationService>();
 
-// 注册LLM服务
-builder.Services.AddHttpClient<FieldTicket.Core.Services.ILLMService, FieldTicket.Infrastructure.LLM.OpenAIService>();
+// 注册LLM服务（使用Google Gemini）
+builder.Services.AddHttpClient<FieldTicket.Core.Services.ILLMService, FieldTicket.Infrastructure.LLM.GoogleGeminiService>();
+// 如果需要使用其他LLM服务，可以取消注释下面这行并注释掉上面这行
+// builder.Services.AddHttpClient<FieldTicket.Core.Services.ILLMService, FieldTicket.Infrastructure.LLM.ZhipuService>();
+// builder.Services.AddHttpClient<FieldTicket.Core.Services.ILLMService, FieldTicket.Infrastructure.LLM.OpenAIService>();
 builder.Services.AddScoped<IConfidenceCalibrationService, FieldTicket.Infrastructure.Services.ConfidenceCalibrationService>();
 builder.Services.AddScoped<IAIAttributionService, FieldTicket.Infrastructure.Services.AIAttributionService>();
 builder.Services.AddScoped<IKnowledgeGraphService, FieldTicket.Infrastructure.Services.KnowledgeGraphService>();
@@ -135,6 +140,7 @@ builder.Services.AddScoped<IEngineerLoadStatService, FieldTicket.Infrastructure.
 builder.Services.AddScoped<IStatisticsService, FieldTicket.Infrastructure.Services.StatisticsService>();
 builder.Services.AddScoped<IAIAssistedTriageService, FieldTicket.Infrastructure.Services.AIAssistedTriageService>();
 builder.Services.AddScoped<ITicketStatusHistoryService, FieldTicket.Infrastructure.Services.TicketStatusHistoryService>();
+builder.Services.AddScoped<IDuplicateDetectionService, FieldTicket.Infrastructure.Services.DuplicateDetectionService>();
 builder.Services.AddScoped<ITicketAssociationService, FieldTicket.Infrastructure.Services.TicketAssociationService>();
 builder.Services.AddScoped<ITicketTemplateService, FieldTicket.Infrastructure.Services.TicketTemplateService>();
 builder.Services.AddScoped<ITicketBatchService, FieldTicket.Infrastructure.Services.TicketBatchService>();
@@ -246,6 +252,7 @@ app.MapProjectEndpoints();
 app.MapCustomerEndpoints();
 app.MapUserManagementEndpoints();
 app.MapFactTableEndpoints();
+app.MapGuidedTicketCreationEndpoints();
 
 // Health check
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))

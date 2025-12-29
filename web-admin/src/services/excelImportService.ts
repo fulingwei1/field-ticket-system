@@ -1,6 +1,6 @@
 import { authService } from './authService';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   // 使用 authService.getAuthHeaders() 确保认证头正确

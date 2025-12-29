@@ -1,6 +1,6 @@
 import { authService } from './authService';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export interface EngineerLoadStatDto {
   statId: string;
@@ -142,6 +142,8 @@ class EngineerLoadStatService {
 }
 
 export const engineerLoadStatService = new EngineerLoadStatService();
+
+
 
 
 

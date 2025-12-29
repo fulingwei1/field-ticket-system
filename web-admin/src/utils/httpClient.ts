@@ -16,7 +16,7 @@
  */
 import { authService } from '../services/authService';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 class HttpClient {
   /**
@@ -82,7 +82,10 @@ class HttpClient {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(error.message || error.detail || error.title || `HTTP error! status: ${response.status}`);
+      const errorMessage = error.message || error.detail || error.title || `HTTP error! status: ${response.status}`;
+      const errorWithStatus = new Error(errorMessage);
+      (errorWithStatus as any).status = response.status;
+      throw errorWithStatus;
     }
 
     return response.json();
@@ -102,11 +105,26 @@ class HttpClient {
    * POST 请求
    */
   async post<T>(endpoint: string, data?: any, options: RequestInit = {}): Promise<T> {
-    return this.request<T>(endpoint, {
+    // 如果是 FormData，直接使用，否则序列化为 JSON
+    const body = data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined);
+    
+    // 准备请求选项
+    const requestOptions: RequestInit = {
       ...options,
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
-    });
+      body,
+    };
+    
+    // 如果是 FormData，不要设置 Content-Type，让浏览器自动设置（包括 boundary）
+    // 否则设置 JSON Content-Type
+    if (!(data instanceof FormData) && data) {
+      requestOptions.headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers as HeadersInit),
+      };
+    }
+    
+    return this.request<T>(endpoint, requestOptions);
   }
 
   /**
@@ -143,5 +161,7 @@ class HttpClient {
 }
 
 export const httpClient = new HttpClient();
+
+
 
 
