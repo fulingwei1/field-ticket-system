@@ -1,5 +1,6 @@
 using FieldTicket.Core.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace FieldTicket.Api.Endpoints;
 
@@ -29,18 +30,41 @@ public static class CustomerEndpoints
     /// 获取客户列表
     /// </summary>
     private static async Task<IResult> GetCustomers(
-        ICustomerService service = null!,
+        ICustomerService service,
+        HttpContext context,
+        ILogger? logger = null,
         [FromQuery] string? search = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 100)
     {
         try
         {
+            // 记录认证信息用于调试
+            var isAuthenticated = context.User.Identity?.IsAuthenticated ?? false;
+            var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+            
+            logger?.LogInformation(
+                "GetCustomers - IsAuthenticated: {IsAuthenticated}, UserId: {UserId}, AuthHeaderPresent: {AuthHeaderPresent}",
+                isAuthenticated, userId, !string.IsNullOrEmpty(authHeader));
+
+            if (!isAuthenticated)
+            {
+                var authPreview = string.IsNullOrEmpty(authHeader)
+                    ? "N/A"
+                    : authHeader.Substring(0, Math.Min(20, authHeader.Length));
+                logger?.LogWarning("GetCustomers - Unauthenticated request. AuthHeader: {AuthHeader}", 
+                    authPreview);
+                return Results.Unauthorized();
+            }
+
             var customers = await service.GetCustomersAsync(search, page, pageSize);
+            logger?.LogInformation("GetCustomers - Returning {Count} customers", customers.Count);
             return Results.Ok(customers);
         }
         catch (Exception ex)
         {
+            logger?.LogError(ex, "GetCustomers - Error occurred");
             return Results.Problem(detail: ex.Message, statusCode: 500);
         }
     }

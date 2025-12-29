@@ -67,6 +67,41 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const menuItems: MenuProps['items'] = [
     {
+      key: '/customers',
+      icon: <TeamOutlined />,
+      label: '客户管理',
+    },
+    {
+      key: '/projects',
+      icon: <FileTextOutlined />,
+      label: '项目管理',
+      children: [
+        {
+          key: '/projects',
+          label: '项目列表',
+        },
+      ],
+    },
+    {
+      key: '/devices',
+      icon: <SettingOutlined />,
+      label: '设备列表',
+      children: [
+        {
+          key: '/devices',
+          label: '设备列表',
+        },
+        {
+          key: '/devices/config-snapshot',
+          label: '配置快照',
+        },
+        {
+          key: '/devices/qrcode-generator',
+          label: '二维码生成',
+        },
+      ],
+    },
+    {
       key: '/tickets',
       icon: <FileTextOutlined />,
       label: '工单管理',
@@ -76,45 +111,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           label: '工单列表',
         },
         {
-          key: '/tickets/new',
-          label: '创建工单',
-          icon: <PlusOutlined />,
-        },
-        {
           key: '/tickets/templates',
           label: '工单模板',
         },
       ],
-    },
-    {
-      key: '/performance',
-      icon: <BarChartOutlined />,
-      label: '绩效管理',
-      children: [
-        {
-          key: '/performance/my',
-          label: '我的绩效',
-          icon: <UserOutlined />,
-        },
-        {
-          key: '/performance/team',
-          label: '团队绩效',
-          icon: <TeamOutlined />,
-        },
-        {
-          key: '/performance/load-stats',
-          label: '负载统计',
-        },
-        {
-          key: '/performance/growth-curve',
-          label: '成长曲线',
-        },
-      ],
-    },
-    {
-      key: '/statistics',
-      icon: <BarChartOutlined />,
-      label: '统计分析',
     },
     {
       key: '/corrective-actions',
@@ -142,29 +142,32 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       ],
     },
     {
-      key: '/devices',
-      icon: <SettingOutlined />,
-      label: '设备管理',
-      children: [
-        {
-          key: '/devices/config-snapshot',
-          label: '配置快照',
-        },
-        {
-          key: '/devices/qrcode-generator',
-          label: '二维码生成',
-        },
-      ],
+      key: '/statistics',
+      icon: <BarChartOutlined />,
+      label: '统计分析',
     },
     {
-      key: '/projects',
-      icon: <FileTextOutlined />,
-      label: '项目管理',
+      key: '/performance',
+      icon: <BarChartOutlined />,
+      label: '绩效管理',
       children: [
         {
-          key: '/projects/excel-import',
-          label: 'Excel导入',
-          icon: <PlusOutlined />,
+          key: '/performance/my',
+          label: '我的绩效',
+          icon: <UserOutlined />,
+        },
+        {
+          key: '/performance/team',
+          label: '团队绩效',
+          icon: <TeamOutlined />,
+        },
+        {
+          key: '/performance/load-stats',
+          label: '负载统计',
+        },
+        {
+          key: '/performance/growth-curve',
+          label: '成长曲线',
         },
       ],
     },
@@ -219,6 +222,27 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       return [path];
     }
     if (path.startsWith('/corrective-actions')) {
+      return [path];
+    }
+    if (path.startsWith('/customers')) {
+      return [path];
+    }
+    if (path.startsWith('/projects')) {
+      return [path];
+    }
+    if (path.startsWith('/devices')) {
+      return [path];
+    }
+    if (path.startsWith('/ai-analysis')) {
+      return [path];
+    }
+    if (path.startsWith('/judgement-cards')) {
+      return [path];
+    }
+    if (path.startsWith('/statistics')) {
+      return [path];
+    }
+    if (path.startsWith('/users')) {
       return [path];
     }
     return [];
@@ -311,4 +335,3 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 };
 
 export default AppLayout;
-

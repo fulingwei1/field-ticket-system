@@ -27,10 +27,12 @@ import CorrectiveActionDetail from './pages/corrective-actions/ActionDetail';
 import EngineerLoadStats from './pages/performance/EngineerLoadStats';
 import NewcomerGrowthCurve from './pages/performance/NewcomerGrowthCurve';
 import QRCodeGenerator from './pages/devices/QRCodeGenerator';
-import ExcelImport from './pages/projects/ExcelImport';
+import DeviceList from './pages/devices/DeviceList';
 import ProjectList from './pages/projects/ProjectList';
+import ExcelImport from './pages/projects/ExcelImport';
 import ProblemDetail from './pages/projects/ProblemDetail';
 import ProblemStatistics from './pages/projects/ProblemStatistics';
+import CustomerList from './pages/customers/CustomerList';
 import UserProfile from './pages/user-profile/UserProfile';
 import UserManagement from './pages/users/UserManagement';
 import ThresholdManagement from './pages/thresholds/ThresholdManagement';
@@ -119,6 +121,7 @@ export default function AppRoutes() {
               <Route path="/judgement-cards/version" element={<JudgementCardVersion />} />
               
               {/* 设备配置管理 */}
+              <Route path="/devices" element={<DeviceList />} />
               <Route path="/devices/config-snapshot" element={<DeviceConfigSnapshot />} />
               <Route path="/devices/qrcode-generator" element={<QRCodeGenerator />} />
               
@@ -132,11 +135,13 @@ export default function AppRoutes() {
               {/* 统计分析 */}
               <Route path="/statistics" element={<StatisticsDashboard />} />
               
-              {/* 项目导入 */}
-              <Route path="/projects/excel-import" element={<ExcelImport />} />
+              {/* 客户管理 */}
+              <Route path="/customers" element={<CustomerList />} />
+              
               
               {/* 项目管理 */}
               <Route path="/projects" element={<ProjectList />} />
+              <Route path="/projects/excel-import" element={<ExcelImport />} />
               <Route path="/projects/problems/:problemId" element={<ProblemDetail />} />
               <Route path="/projects/statistics" element={<ProblemStatistics />} />
               
@@ -163,4 +168,3 @@ export default function AppRoutes() {
     </Routes>
   );
 }
-

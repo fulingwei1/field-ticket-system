@@ -16,7 +16,7 @@ public class Project
     public string? CustomerName { get; set; } // 客户名称（冗余字段，便于查询）
     
     // 设备信息
-    public string DeviceType { get; set; } = string.Empty; // 设备类型：线体/单机/其他
+    public string? DeviceType { get; set; } // 设备类型：线体/单机/其他
     public string? IndustryType { get; set; } // 行业类型：汽车/白电/3C等
     
     // 财务信息

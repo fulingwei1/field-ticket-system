@@ -13,12 +13,14 @@ import {
   Progress,
   Space,
   Typography,
+  Button,
 } from 'antd';
 import {
   TrophyOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   UserOutlined,
+  CalculatorOutlined,
 } from '@ant-design/icons';
 import { performanceService, PerformanceMetricsDto, PerformanceTrendDto } from '../../services/performanceService';
 import { authService } from '../../services/authService';
@@ -35,6 +37,7 @@ const MyPerformance: React.FC = () => {
   const [periodStart, setPeriodStart] = useState<Dayjs>(dayjs().startOf('month'));
 
   const user = authService.getUser();
+  const [calculating, setCalculating] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -58,8 +61,11 @@ const MyPerformance: React.FC = () => {
     } catch (error: any) {
       if (error.message === 'Performance metrics not found') {
         message.warning('该周期暂无绩效数据，请先计算绩效');
+      } else if (error.message?.includes('认证失败') || error.message?.includes('401')) {
+        message.error('认证失败，请重新登录');
+        console.error('Authentication failed:', error);
       } else {
-        message.error('加载绩效数据失败');
+        message.error(`加载绩效数据失败: ${error.message || '未知错误'}`);
         console.error('Failed to load performance:', error);
       }
     } finally {
@@ -82,8 +88,48 @@ const MyPerformance: React.FC = () => {
         toDate,
       });
       setTrends(data);
-    } catch (error) {
-      console.error('Failed to load trends:', error);
+    } catch (error: any) {
+      if (error.message?.includes('认证失败') || error.message?.includes('401')) {
+        message.error('认证失败，请重新登录');
+        console.error('Authentication failed:', error);
+      } else {
+        console.error('Failed to load trends:', error);
+        // 趋势数据加载失败不影响主页面显示，只记录日志
+      }
+    }
+  };
+
+  const handleCalculatePerformance = async () => {
+    if (!user?.id) return;
+
+    setCalculating(true);
+    try {
+      // 计算当前周期的绩效
+      const periodStartStr = periodStart.format('YYYY-MM-DD');
+      const periodEnd = periodStart.endOf(periodType === 'monthly' ? 'month' : periodType === 'yearly' ? 'year' : 'day');
+      const periodEndStr = periodEnd.format('YYYY-MM-DD');
+
+      await performanceService.calculatePerformance({
+        engineerId: user.id,
+        periodType,
+        periodStart: periodStartStr,
+        periodEnd: periodEndStr,
+      });
+
+      message.success('绩效计算成功');
+      // 重新加载绩效数据
+      await loadPerformance();
+    } catch (error: any) {
+      if (error.message?.includes('认证失败') || error.message?.includes('401')) {
+        message.error('认证失败，请重新登录');
+      } else if (error.message?.includes('403') || error.message?.includes('Forbid')) {
+        message.error('权限不足，只有管理员可以计算绩效');
+      } else {
+        message.error(`计算绩效失败: ${error.message || '未知错误'}`);
+        console.error('Failed to calculate performance:', error);
+      }
+    } finally {
+      setCalculating(false);
     }
   };
 
@@ -412,7 +458,21 @@ const MyPerformance: React.FC = () => {
         ) : (
           <Card>
             <div style={{ textAlign: 'center', padding: '40px' }}>
-              <Text type="secondary">暂无绩效数据，请联系管理员计算绩效</Text>
+              <Text type="secondary" style={{ display: 'block', marginBottom: '16px' }}>
+                {user?.role === 'Admin' || user?.role === 'admin' 
+                  ? '该周期暂无绩效数据，请点击下方按钮计算绩效' 
+                  : '暂无绩效数据，请联系管理员计算绩效'}
+              </Text>
+              {(user?.role === 'Admin' || user?.role === 'admin') && (
+                <Button
+                  type="primary"
+                  icon={<CalculatorOutlined />}
+                  loading={calculating}
+                  onClick={handleCalculatePerformance}
+                >
+                  计算绩效
+                </Button>
+              )}
             </div>
           </Card>
         )}

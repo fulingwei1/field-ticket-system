@@ -14,7 +14,7 @@ COPY . .
 
 # Build the application
 # Vite environment variables must be set at build time
-ARG VITE_API_URL=http://localhost:5001
+ARG VITE_API_URL=http://localhost:5000
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
@@ -32,5 +32,4 @@ EXPOSE 80
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
-
 

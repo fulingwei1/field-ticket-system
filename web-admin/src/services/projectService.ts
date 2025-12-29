@@ -1,10 +1,11 @@
 import { authService } from './authService';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export interface ProjectQueryFilter {
   projectNo?: string;
   projectName?: string;
+  customerId?: string;
   customerName?: string;
   deviceType?: string;
   projectStatus?: string;
@@ -159,7 +160,8 @@ class ProjectService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(error.message || `HTTP error! status: ${response.status}`);
+      const message = error.message || error.detail || error.title;
+      throw new Error(message || `HTTP error! status: ${response.status}`);
     }
 
     return response.json();
@@ -237,8 +239,6 @@ class ProjectService {
 }
 
 export const projectService = new ProjectService();
-
-
 
 
 

@@ -1,6 +1,6 @@
 import { authService } from './authService';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export interface PerformanceMetricsDto {
   metricId: string;
@@ -116,7 +116,34 @@ class PerformanceService {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to get performance metrics');
+      if (response.status === 401) {
+        // 尝试刷新 token
+        try {
+          await authService.refreshToken();
+          const retryHeaders = authService.getAuthHeaders();
+          const retryResponse = await fetch(`${API_BASE_URL}/api/performance/metrics?${queryParams}`, {
+            headers: retryHeaders,
+          });
+          if (!retryResponse.ok) {
+            if (retryResponse.status === 401) {
+              authService.clearAuth();
+              window.location.href = '/login';
+              throw new Error('认证失败，请重新登录');
+            }
+            throw new Error('Failed to get performance metrics');
+          }
+          return retryResponse.json();
+        } catch (error: any) {
+          if (error.message === '认证失败，请重新登录') {
+            throw error;
+          }
+          authService.clearAuth();
+          window.location.href = '/login';
+          throw new Error('认证失败，请重新登录');
+        }
+      }
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(error.message || 'Failed to get performance metrics');
     }
 
     return response.json();
@@ -142,10 +169,43 @@ class PerformanceService {
     );
 
     if (!response.ok) {
+      if (response.status === 401) {
+        // 尝试刷新 token
+        try {
+          await authService.refreshToken();
+          const retryHeaders = authService.getAuthHeaders();
+          const retryResponse = await fetch(
+            `${API_BASE_URL}/api/performance/engineer/${engineerId}?${queryParams}`,
+            {
+              headers: retryHeaders,
+            }
+          );
+          if (!retryResponse.ok) {
+            if (retryResponse.status === 401) {
+              authService.clearAuth();
+              window.location.href = '/login';
+              throw new Error('认证失败，请重新登录');
+            }
+            if (retryResponse.status === 404) {
+              throw new Error('Performance metrics not found');
+            }
+            throw new Error('Failed to get engineer performance');
+          }
+          return retryResponse.json();
+        } catch (error: any) {
+          if (error.message === '认证失败，请重新登录' || error.message === 'Performance metrics not found') {
+            throw error;
+          }
+          authService.clearAuth();
+          window.location.href = '/login';
+          throw new Error('认证失败，请重新登录');
+        }
+      }
       if (response.status === 404) {
         throw new Error('Performance metrics not found');
       }
-      throw new Error('Failed to get engineer performance');
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(error.message || 'Failed to get engineer performance');
     }
 
     return response.json();
@@ -169,7 +229,33 @@ class PerformanceService {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to get team performance');
+      if (response.status === 401) {
+        try {
+          await authService.refreshToken();
+          const retryHeaders = authService.getAuthHeaders();
+          const retryResponse = await fetch(`${API_BASE_URL}/api/performance/team?${queryParams}`, {
+            headers: retryHeaders,
+          });
+          if (!retryResponse.ok) {
+            if (retryResponse.status === 401) {
+              authService.clearAuth();
+              window.location.href = '/login';
+              throw new Error('认证失败，请重新登录');
+            }
+            throw new Error('Failed to get team performance');
+          }
+          return retryResponse.json();
+        } catch (error: any) {
+          if (error.message === '认证失败，请重新登录') {
+            throw error;
+          }
+          authService.clearAuth();
+          window.location.href = '/login';
+          throw new Error('认证失败，请重新登录');
+        }
+      }
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(error.message || 'Failed to get team performance');
     }
 
     return response.json();
@@ -193,7 +279,33 @@ class PerformanceService {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to get performance ranking');
+      if (response.status === 401) {
+        try {
+          await authService.refreshToken();
+          const retryHeaders = authService.getAuthHeaders();
+          const retryResponse = await fetch(`${API_BASE_URL}/api/performance/ranking?${queryParams}`, {
+            headers: retryHeaders,
+          });
+          if (!retryResponse.ok) {
+            if (retryResponse.status === 401) {
+              authService.clearAuth();
+              window.location.href = '/login';
+              throw new Error('认证失败，请重新登录');
+            }
+            throw new Error('Failed to get performance ranking');
+          }
+          return retryResponse.json();
+        } catch (error: any) {
+          if (error.message === '认证失败，请重新登录') {
+            throw error;
+          }
+          authService.clearAuth();
+          window.location.href = '/login';
+          throw new Error('认证失败，请重新登录');
+        }
+      }
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(error.message || 'Failed to get performance ranking');
     }
 
     return response.json();
@@ -219,7 +331,33 @@ class PerformanceService {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to get performance trends');
+      if (response.status === 401) {
+        try {
+          await authService.refreshToken();
+          const retryHeaders = authService.getAuthHeaders();
+          const retryResponse = await fetch(`${API_BASE_URL}/api/performance/trends?${queryParams}`, {
+            headers: retryHeaders,
+          });
+          if (!retryResponse.ok) {
+            if (retryResponse.status === 401) {
+              authService.clearAuth();
+              window.location.href = '/login';
+              throw new Error('认证失败，请重新登录');
+            }
+            throw new Error('Failed to get performance trends');
+          }
+          return retryResponse.json();
+        } catch (error: any) {
+          if (error.message === '认证失败，请重新登录') {
+            throw error;
+          }
+          authService.clearAuth();
+          window.location.href = '/login';
+          throw new Error('认证失败，请重新登录');
+        }
+      }
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(error.message || 'Failed to get performance trends');
     }
 
     return response.json();
@@ -239,7 +377,35 @@ class PerformanceService {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to calculate performance');
+      if (response.status === 401) {
+        try {
+          await authService.refreshToken();
+          const retryHeaders = authService.getAuthHeaders();
+          const retryResponse = await fetch(`${API_BASE_URL}/api/performance/calculate`, {
+            method: 'POST',
+            headers: retryHeaders,
+            body: JSON.stringify(request),
+          });
+          if (!retryResponse.ok) {
+            if (retryResponse.status === 401) {
+              authService.clearAuth();
+              window.location.href = '/login';
+              throw new Error('认证失败，请重新登录');
+            }
+            throw new Error('Failed to calculate performance');
+          }
+          return retryResponse.json();
+        } catch (error: any) {
+          if (error.message === '认证失败，请重新登录') {
+            throw error;
+          }
+          authService.clearAuth();
+          window.location.href = '/login';
+          throw new Error('认证失败，请重新登录');
+        }
+      }
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(error.message || 'Failed to calculate performance');
     }
 
     return response.json();

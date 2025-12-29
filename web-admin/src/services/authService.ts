@@ -21,7 +21,7 @@ export interface UserInfo {
   deptName?: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 class AuthService {
   private tokenKey = 'field_ticket_token';
@@ -195,11 +195,12 @@ class AuthService {
   /**
    * 获取认证请求头
    */
-  getAuthHeaders(): HeadersInit {
+  getAuthHeaders(extraHeaders: HeadersInit = {}): HeadersInit {
     const token = this.getToken();
     return {
-      Authorization: token ? `Bearer ${token}` : '',
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...extraHeaders,
     };
   }
 
@@ -230,5 +231,4 @@ class AuthService {
 }
 
 export const authService = new AuthService();
-
 

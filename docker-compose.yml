@@ -107,7 +107,7 @@ services:
       context: ./web-admin
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${API_URL:-http://localhost:5001}
+        VITE_API_URL: ${API_URL:-http://localhost:5000}
     container_name: fieldticket-web
     ports:
       - "${WEB_PORT:-3000}:80"
@@ -128,5 +128,4 @@ volumes:
 networks:
   fieldticket-network:
     driver: bridge
-
 

@@ -25,7 +25,7 @@ public class ProjectDto
     public string ProjectName { get; set; } = string.Empty;
     public Guid CustomerId { get; set; }
     public string? CustomerName { get; set; }
-    public string DeviceType { get; set; } = string.Empty;
+    public string? DeviceType { get; set; }
     public string? IndustryType { get; set; }
     public decimal? SalesAmount { get; set; }
     public int Quantity { get; set; }

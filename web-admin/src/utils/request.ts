@@ -10,17 +10,51 @@ class Request {
   /**
    * 获取请求头
    */
-  private getHeaders(): HeadersInit {
-    const headers: HeadersInit = {
+  private buildHeaders(token?: string | null, extraHeaders?: HeadersInit): HeadersInit {
+    return {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(extraHeaders || {}),
     };
+  }
 
+  private async tryRefreshToken(): Promise<string | null> {
+    try {
+      const refreshed = await authService.refreshToken();
+      return refreshed.token;
+    } catch {
+      return null;
+    }
+  }
+
+  private async fetchWithAuth(
+    url: string,
+    options: RequestInit,
+    allowRefresh: boolean = true
+  ): Promise<Response> {
     const token = authService.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(url, {
+      ...options,
+      headers: this.buildHeaders(token, options.headers),
+    });
+
+    if (response.status !== 401 || !allowRefresh) {
+      return response;
     }
 
-    return headers;
+    const refreshedToken = await this.tryRefreshToken();
+    if (!refreshedToken) {
+      authService.clearAuth();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+      return response;
+    }
+
+    return fetch(url, {
+      ...options,
+      headers: this.buildHeaders(refreshedToken, options.headers),
+    });
   }
 
   /**
@@ -41,9 +75,8 @@ class Request {
       }
     }
 
-    const response = await fetch(fullUrl, {
+    const response = await this.fetchWithAuth(fullUrl, {
       method: 'GET',
-      headers: this.getHeaders(),
     });
 
     if (!response.ok) {
@@ -61,9 +94,8 @@ class Request {
   async post<T>(url: string, body?: any): Promise<{ data: T }> {
     const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
 
-    const response = await fetch(fullUrl, {
+    const response = await this.fetchWithAuth(fullUrl, {
       method: 'POST',
-      headers: this.getHeaders(),
       body: body ? JSON.stringify(body) : undefined,
     });
 
@@ -82,9 +114,8 @@ class Request {
   async put<T>(url: string, body?: any): Promise<{ data: T }> {
     const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
 
-    const response = await fetch(fullUrl, {
+    const response = await this.fetchWithAuth(fullUrl, {
       method: 'PUT',
-      headers: this.getHeaders(),
       body: body ? JSON.stringify(body) : undefined,
     });
 
@@ -103,9 +134,8 @@ class Request {
   async delete<T>(url: string): Promise<{ data: T }> {
     const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
 
-    const response = await fetch(fullUrl, {
+    const response = await this.fetchWithAuth(fullUrl, {
       method: 'DELETE',
-      headers: this.getHeaders(),
     });
 
     if (!response.ok) {
@@ -119,6 +149,8 @@ class Request {
 }
 
 export const request = new Request();
+
+
 
 
 

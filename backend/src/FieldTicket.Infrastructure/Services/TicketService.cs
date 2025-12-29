@@ -444,21 +444,18 @@ public class TicketService : ITicketService
 
         var userDict = users.ToDictionary(u => u.Id, u => u.Name ?? string.Empty);
 
-        // 查询同一设备的其他工单（用于获取 DeviceSn）
+        // 从 devices 表查询 DeviceSn
         var deviceSnDict = new Dictionary<Guid, string>();
-        var ticketsWithoutDeviceSn = tickets.Where(t => string.IsNullOrEmpty(t.DeviceSn)).ToList();
-        if (ticketsWithoutDeviceSn.Any())
+        if (deviceIds.Any())
         {
-            var deviceIdsToQuery = ticketsWithoutDeviceSn.Select(t => t.DeviceId).Distinct().ToList();
-            var deviceSnFromTickets = await _dbContext.Tickets
-                .Where(t => deviceIdsToQuery.Contains(t.DeviceId) && !string.IsNullOrEmpty(t.DeviceSn))
-                .GroupBy(t => t.DeviceId)
-                .Select(g => new { DeviceId = g.Key, DeviceSn = g.OrderByDescending(t => t.CreatedAt).First().DeviceSn })
+            var devicesData = await _dbContext.Devices
+                .Where(d => deviceIds.Contains(d.DeviceId))
+                .Select(d => new { d.DeviceId, d.DeviceSn })
                 .ToListAsync();
 
-            foreach (var item in deviceSnFromTickets)
+            foreach (var device in devicesData)
             {
-                deviceSnDict[item.DeviceId] = item.DeviceSn ?? string.Empty;
+                deviceSnDict[device.DeviceId] = device.DeviceSn ?? string.Empty;
             }
         }
 
@@ -467,9 +464,7 @@ public class TicketService : ITicketService
             TicketId = t.TicketId,
             TicketNo = t.TicketNo,
             CustomerName = projectDict.TryGetValue(t.ProjectId, out var projectCustomerName) ? projectCustomerName : string.Empty,
-            DeviceSn = !string.IsNullOrEmpty(t.DeviceSn)
-                ? t.DeviceSn
-                : (deviceSnDict.TryGetValue(t.DeviceId, out var deviceSn) ? deviceSn : string.Empty),
+            DeviceSn = deviceSnDict.TryGetValue(t.DeviceId, out var deviceSn) ? deviceSn : string.Empty,
             Domain = t.Domain,
             StepCode = t.StepCode,
             SymptomTitle = t.SymptomTitle,

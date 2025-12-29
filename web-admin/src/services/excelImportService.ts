@@ -1,14 +1,14 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { authService } from './authService';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('token');
-  const headers: HeadersInit = {
+  // 使用 authService.getAuthHeaders() 确保认证头正确
+  const headers = authService.getAuthHeaders();
+  const finalHeaders: HeadersInit = {
+    ...headers,
     ...(options.headers as HeadersInit),
   };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
@@ -111,11 +111,8 @@ class ExcelImportService {
     const formData = new FormData();
     formData.append('file', file);
 
-    const token = localStorage.getItem('token');
-    const headers: HeadersInit = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    // 使用 authService.getAuthHeaders() 确保认证头正确
+    const headers = authService.getAuthHeaders();
 
     const response = await fetch(`${API_BASE_URL}/api/excel-import/parse`, {
       method: 'POST',
@@ -165,11 +162,8 @@ class ExcelImportService {
    * 下载Excel模板
    */
   async downloadTemplate(): Promise<void> {
-    const token = localStorage.getItem('token');
-    const headers: HeadersInit = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    // 使用 authService.getAuthHeaders() 确保认证头正确
+    const headers = authService.getAuthHeaders();
 
     const response = await fetch(`${API_BASE_URL}/api/excel-import/template`, {
       method: 'GET',

@@ -110,6 +110,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.SwVersion).HasColumnName("sw_version").HasMaxLength(50).IsRequired();
             entity.Property(e => e.PlcVersion).HasColumnName("plc_version").HasMaxLength(50).IsRequired();
             entity.Property(e => e.ParamVersion).HasColumnName("param_version").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.HwVersion).HasColumnName("hw_version").HasMaxLength(50);
             entity.Property(e => e.FactsJson).HasColumnName("facts_json").HasColumnType("jsonb");
             entity.Property(e => e.ActionsTaken).HasColumnName("actions_taken").HasColumnType("text[]");
             entity.Property(e => e.ActionsTakenNote).HasColumnName("actions_taken_note");
@@ -135,6 +136,13 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.ResponsibilityNotes).HasColumnName("responsibility_notes");
             entity.Property(e => e.AttributedBy).HasColumnName("attributed_by");
             entity.Property(e => e.AttributedAt).HasColumnName("attributed_at");
+
+            // 去重和合并字段
+            entity.Property(e => e.DuplicateOf).HasColumnName("duplicate_of");
+            entity.Property(e => e.MergedInto).HasColumnName("merged_into");
+            entity.Property(e => e.MergeReason).HasColumnName("merge_reason");
+            entity.Property(e => e.MergedBy).HasColumnName("merged_by");
+            entity.Property(e => e.MergedAt).HasColumnName("merged_at");
 
             entity.HasIndex(e => e.TicketNo).IsUnique();
             entity.HasIndex(e => e.Status);

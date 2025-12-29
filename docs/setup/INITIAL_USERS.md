@@ -97,3 +97,6 @@ docker exec -i fieldticket-postgres psql -U app -d fieldticket < scripts/init-us
 
 
 
+
+
+

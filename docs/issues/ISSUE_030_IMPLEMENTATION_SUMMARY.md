@@ -170,3 +170,6 @@ CREATE INDEX idx_kvh_verified_at ON knowledge_verification_histories(verified_at
 
 
 
+
+
+

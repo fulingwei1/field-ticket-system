@@ -1,6 +1,6 @@
 import { authService } from './authService';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export interface CreateTicketRequest {
   localDraftId?: string;
@@ -175,7 +175,9 @@ class TicketService {
       throw new Error('Failed to get ticket');
     }
 
-    return response.json();
+    const data = await response.json();
+    // 后端返回的是 { ticket, relatedChanges }，需要提取 ticket
+    return data.ticket || data;
   }
 
   /**
@@ -210,7 +212,17 @@ class TicketService {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to get tickets');
+      const errorText = await response.text();
+      let errorMessage = `Failed to get tickets: ${response.status} ${response.statusText}`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage = errorJson.message || errorJson.detail || errorMessage;
+      } catch {
+        if (errorText) {
+          errorMessage += ` - ${errorText}`;
+        }
+      }
+      throw new Error(errorMessage);
     }
 
     return response.json();

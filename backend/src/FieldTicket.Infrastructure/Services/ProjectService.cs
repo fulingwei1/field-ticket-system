@@ -81,11 +81,19 @@ public class ProjectService : IProjectService
 
         // 获取每个项目的问题数量
         var projectIds = projects.Select(p => p.ProjectId).ToList();
-        var problemCounts = await _dbContext.FieldProblems
-            .Where(p => projectIds.Contains(p.ProjectId))
-            .GroupBy(p => p.ProjectId)
-            .Select(g => new { ProjectId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.ProjectId, x => x.Count);
+        Dictionary<Guid, int> problemCounts;
+        if (projectIds.Count == 0)
+        {
+            problemCounts = new Dictionary<Guid, int>();
+        }
+        else
+        {
+            problemCounts = await _dbContext.FieldProblems
+                .Where(p => projectIds.Contains(p.ProjectId))
+                .GroupBy(p => p.ProjectId)
+                .Select(g => new { ProjectId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.ProjectId, x => x.Count);
+        }
 
         var items = projects.Select(p => new ProjectDto
         {
@@ -94,7 +102,7 @@ public class ProjectService : IProjectService
             ProjectName = p.ProjectName,
             CustomerId = p.CustomerId,
             CustomerName = p.CustomerName,
-            DeviceType = p.DeviceType,
+            DeviceType = p.DeviceType ?? string.Empty,
             IndustryType = p.IndustryType,
             SalesAmount = p.SalesAmount,
             Quantity = p.Quantity,
@@ -137,7 +145,7 @@ public class ProjectService : IProjectService
             ProjectName = project.ProjectName,
             CustomerId = project.CustomerId,
             CustomerName = project.CustomerName,
-            DeviceType = project.DeviceType,
+            DeviceType = project.DeviceType ?? string.Empty,
             IndustryType = project.IndustryType,
             SalesAmount = project.SalesAmount,
             Quantity = project.Quantity,
@@ -687,7 +695,6 @@ public class ProjectService : IProjectService
         };
     }
 }
-
 
 
 

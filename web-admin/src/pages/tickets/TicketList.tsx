@@ -75,9 +75,10 @@ const TicketList: React.FC = () => {
       const result = await ticketService.getTickets({ page, pageSize: 20 });
       setTickets(result.items);
       setTotal(result.total);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load tickets:', error);
-      message.error('加载工单列表失败');
+      const errorMessage = error?.message || '加载工单列表失败';
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }

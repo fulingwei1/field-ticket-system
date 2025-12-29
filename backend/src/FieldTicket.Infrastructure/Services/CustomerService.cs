@@ -24,32 +24,43 @@ public class CustomerService : ICustomerService
 
     public async Task<List<CustomerDto>> GetCustomersAsync(string? search = null, int page = 1, int pageSize = 100)
     {
-        var query = _dbContext.Customers.AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(search))
+        try
         {
-            query = query.Where(c => 
-                c.CustomerName.Contains(search) ||
-                (c.CustomerCode != null && c.CustomerCode.Contains(search)) ||
-                (c.IndustryType != null && c.IndustryType.Contains(search)));
-        }
+            _logger.LogInformation("GetCustomersAsync called with search={Search}, page={Page}, pageSize={PageSize}", search, page, pageSize);
+            
+            var query = _dbContext.Customers.AsQueryable();
 
-        var customers = await query
-            .OrderBy(c => c.CustomerName)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(c => new CustomerDto
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                CustomerId = c.CustomerId,
-                CustomerName = c.CustomerName,
-                CustomerCode = c.CustomerCode,
-                IndustryType = c.IndustryType,
-                ContactPerson = c.ContactPerson,
-                ContactPhone = c.ContactPhone
-            })
-            .ToListAsync();
+                query = query.Where(c => 
+                    c.CustomerName.Contains(search) ||
+                    (c.CustomerCode != null && c.CustomerCode.Contains(search)) ||
+                    (c.IndustryType != null && c.IndustryType.Contains(search)));
+            }
 
-        return customers;
+            var customers = await query
+                .OrderBy(c => c.CustomerName)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(c => new CustomerDto
+                {
+                    CustomerId = c.CustomerId,
+                    CustomerName = c.CustomerName,
+                    CustomerCode = c.CustomerCode,
+                    IndustryType = c.IndustryType,
+                    ContactPerson = c.ContactPerson,
+                    ContactPhone = c.ContactPhone
+                })
+                .ToListAsync();
+
+            _logger.LogInformation("GetCustomersAsync returned {Count} customers", customers.Count);
+            return customers;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in GetCustomersAsync");
+            throw;
+        }
     }
 
     public async Task<CustomerDto?> GetCustomerAsync(Guid customerId)
@@ -70,6 +81,8 @@ public class CustomerService : ICustomerService
         return customer;
     }
 }
+
+
 
 
 
