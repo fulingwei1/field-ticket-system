@@ -57,7 +57,30 @@ export const GuidedTicketCreation: React.FC<GuidedTicketCreationProps> = ({
   useEffect(() => {
     initializeSession();
     loadDevices();
-  }, []);
+    
+    // 定期检查会话有效性（每5分钟）
+    const sessionCheckInterval = setInterval(async () => {
+      if (session && session.sessionId) {
+        try {
+          await guidedTicketCreationService.getSession(session.sessionId);
+        } catch (error: any) {
+          console.warn('会话检查失败，会话可能已过期:', error);
+          // 如果会话不存在，重新创建
+          if (error.status === 404 || error.message?.includes('404') || error.message?.includes('Not Found')) {
+            console.log('会话已失效，重新创建...');
+            const newSession = await initializeSession();
+            if (newSession) {
+              message.info('会话已自动更新');
+            }
+          }
+        }
+      }
+    }, 5 * 60 * 1000); // 5分钟
+    
+    return () => {
+      clearInterval(sessionCheckInterval);
+    };
+  }, [session]);
 
   const initializeSession = async (): Promise<GuidedTicketCreationSession | null> => {
     try {
@@ -132,7 +155,22 @@ export const GuidedTicketCreation: React.FC<GuidedTicketCreationProps> = ({
         setImageList([]);
       }
     } catch (error: any) {
-      message.error('提交失败：' + (error.message || '未知错误'));
+      console.error('提交失败:', error);
+      const errorMessage = error.message || '未知错误';
+      const status = (error as any)?.status;
+      
+      // 如果会话不存在，尝试重新创建
+      if (status === 404 || errorMessage.includes('404') || errorMessage.includes('Not Found') || errorMessage.includes('会话')) {
+        message.warning('会话已失效，正在重新初始化...');
+        const newSession = await initializeSession();
+        if (newSession) {
+          message.info('会话已重新创建，请重新提交信息');
+        } else {
+          message.error('无法重新初始化会话，请刷新页面重试');
+        }
+      } else {
+        message.error('提交失败：' + errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -140,7 +178,16 @@ export const GuidedTicketCreation: React.FC<GuidedTicketCreationProps> = ({
 
   // 回答问题
   const handleAnswerQuestion = async (questionId: string, answer: string, additionalImages?: File[]) => {
-    if (!session) return;
+    if (!session) {
+      message.warning('会话已失效，正在重新初始化...');
+      const newSession = await initializeSession();
+      if (!newSession) {
+        message.error('无法重新初始化会话，请刷新页面重试');
+        return;
+      }
+      message.info('会话已重新创建，请重新提交信息');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -159,7 +206,23 @@ export const GuidedTicketCreation: React.FC<GuidedTicketCreationProps> = ({
       }
       // 否则继续显示下一个问题
     } catch (error: any) {
-      message.error('回答失败：' + (error.message || '未知错误'));
+      console.error('回答失败:', error);
+      const errorMessage = error.message || '未知错误';
+      const status = (error as any)?.status;
+      
+      // 如果会话不存在，尝试重新创建
+      if (status === 404 || errorMessage.includes('404') || errorMessage.includes('Not Found') || errorMessage.includes('会话')) {
+        message.warning('会话已失效，正在重新初始化...');
+        const newSession = await initializeSession();
+        if (newSession) {
+          message.info('会话已重新创建，请重新提交信息');
+          setCurrentStep('initial');
+        } else {
+          message.error('无法重新初始化会话，请刷新页面重试');
+        }
+      } else {
+        message.error('回答失败：' + errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -167,7 +230,17 @@ export const GuidedTicketCreation: React.FC<GuidedTicketCreationProps> = ({
 
   // 生成工单内容
   const handleGenerateContent = async () => {
-    if (!session) return;
+    if (!session) {
+      message.warning('会话已失效，正在重新初始化...');
+      const newSession = await initializeSession();
+      if (!newSession) {
+        message.error('无法重新初始化会话，请刷新页面重试');
+        return;
+      }
+      message.info('会话已重新创建，请重新提交信息');
+      setCurrentStep('initial');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -175,7 +248,23 @@ export const GuidedTicketCreation: React.FC<GuidedTicketCreationProps> = ({
       setTicketContent(content);
       setCurrentStep('review');
     } catch (error: any) {
-      message.error('生成工单内容失败：' + (error.message || '未知错误'));
+      console.error('生成工单内容失败:', error);
+      const errorMessage = error.message || '未知错误';
+      const status = (error as any)?.status;
+      
+      // 如果会话不存在，尝试重新创建
+      if (status === 404 || errorMessage.includes('404') || errorMessage.includes('Not Found') || errorMessage.includes('会话')) {
+        message.warning('会话已失效，正在重新初始化...');
+        const newSession = await initializeSession();
+        if (newSession) {
+          message.info('会话已重新创建，请重新提交信息');
+          setCurrentStep('initial');
+        } else {
+          message.error('无法重新初始化会话，请刷新页面重试');
+        }
+      } else {
+        message.error('生成工单内容失败：' + errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -184,7 +273,18 @@ export const GuidedTicketCreation: React.FC<GuidedTicketCreationProps> = ({
   // 创建工单
   const handleCreateTicket = async () => {
     if (!session || !selectedDeviceId) {
-      message.error('请选择设备');
+      if (!session) {
+        message.warning('会话已失效，正在重新初始化...');
+        const newSession = await initializeSession();
+        if (!newSession) {
+          message.error('无法重新初始化会话，请刷新页面重试');
+          return;
+        }
+        message.info('会话已重新创建，请重新生成工单内容');
+        setCurrentStep('initial');
+      } else {
+        message.error('请选择设备');
+      }
       return;
     }
 
@@ -202,7 +302,23 @@ export const GuidedTicketCreation: React.FC<GuidedTicketCreationProps> = ({
         onComplete(ticket.ticketId);
       }
     } catch (error: any) {
-      message.error('创建工单失败：' + (error.message || '未知错误'));
+      console.error('创建工单失败:', error);
+      const errorMessage = error.message || '未知错误';
+      const status = (error as any)?.status;
+      
+      // 如果会话不存在，尝试重新创建
+      if (status === 404 || errorMessage.includes('404') || errorMessage.includes('Not Found') || errorMessage.includes('会话')) {
+        message.warning('会话已失效，正在重新初始化...');
+        const newSession = await initializeSession();
+        if (newSession) {
+          message.info('会话已重新创建，请重新生成工单内容');
+          setCurrentStep('initial');
+        } else {
+          message.error('无法重新初始化会话，请刷新页面重试');
+        }
+      } else {
+        message.error('创建工单失败：' + errorMessage);
+      }
     } finally {
       setLoading(false);
     }
